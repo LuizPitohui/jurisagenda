@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual Environments
+.venv/
+venv/
+env/
+# Django
+*.log
+local_settings.py
+db.sqlite3
+staticfiles/
+media/
+htmlcov/
+.coverage
+.coverage.*
+
+# Poetry
+poetry.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+# Test
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
