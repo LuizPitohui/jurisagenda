@@ -109,9 +109,12 @@ class EventUpdateSerializer(serializers.ModelSerializer):
 
 class CalendarEventSerializer(serializers.ModelSerializer):
     """Serializer mínimo para renderização do calendário (R05 — performance)."""
+    needs_followup = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = Event
         fields = [
             "id", "title", "event_type", "start_datetime",
             "status", "color_tag", "tv_enabled", "assigned_to",
+            "needs_followup",
         ]

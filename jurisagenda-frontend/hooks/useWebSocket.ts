@@ -14,26 +14,33 @@ interface Options {
 
 export function useWebSocket(path: string, opts: Options = {}) {
   const {
-    onMessage,
-    onConnect,
-    onDisconnect,
     requireAuth  = false,
     reconnectMs  = 3000,
-    maxRetries   = 10,
+    maxRetries   = 5,
   } = opts;
 
-  const wsRef   = useRef<WebSocket | null>(null);
-  const retries = useRef(0);
-  const timer   = useRef<ReturnType<typeof setTimeout>>();
-
+  const wsRef      = useRef<WebSocket | null>(null);
+  const retries    = useRef(0);
+  const timer      = useRef<ReturnType<typeof setTimeout>>();
+  const optsRef    = useRef(opts);
   const [connected, setConnected] = useState(false);
 
-  const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || 
-    (typeof window !== 'undefined' ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}` : '');
+  // Mantém opts atualizado sem recriar connect
+  useEffect(() => {
+    optsRef.current = opts;
+  });
 
   const connect = useCallback(() => {
     if (typeof window === 'undefined') return;
 
+    // Fecha conexão anterior se existir
+    if (wsRef.current) {
+      wsRef.current.onclose = null;
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
+    const WS_BASE = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
     let url = `${WS_BASE}${path}`;
 
     if (requireAuth) {
@@ -48,12 +55,12 @@ export function useWebSocket(path: string, opts: Options = {}) {
     ws.onopen = () => {
       retries.current = 0;
       setConnected(true);
-      onConnect?.();
+      optsRef.current.onConnect?.();
     };
 
     ws.onmessage = (e) => {
       try {
-        onMessage?.(JSON.parse(e.data) as WSMessage);
+        optsRef.current.onMessage?.(JSON.parse(e.data) as WSMessage);
       } catch {
         // ignora mensagens malformadas
       }
@@ -61,25 +68,29 @@ export function useWebSocket(path: string, opts: Options = {}) {
 
     ws.onclose = () => {
       setConnected(false);
-      onDisconnect?.();
+      optsRef.current.onDisconnect?.();
       wsRef.current = null;
 
       if (retries.current < maxRetries) {
         retries.current++;
-        // backoff exponencial: 3s, 6s, 9s, 12s (máximo)
         const delay = reconnectMs * Math.min(retries.current, 4);
         timer.current = setTimeout(connect, delay);
       }
     };
 
     ws.onerror = () => ws.close();
-  }, [path, requireAuth, onMessage, onConnect, onDisconnect, reconnectMs, maxRetries, WS_BASE]);
+
+  }, [path, requireAuth, reconnectMs, maxRetries]); // opts fora das deps
 
   useEffect(() => {
     connect();
     return () => {
       clearTimeout(timer.current);
-      wsRef.current?.close();
+      if (wsRef.current) {
+        wsRef.current.onclose = null; // evita reconexão no unmount
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
   }, [connect]);
 

@@ -138,12 +138,15 @@ services:
     build:
       context: ./jurisagenda-frontend
       dockerfile: dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api/v1/
+        NEXT_PUBLIC_WS_URL: ""
+        NEXT_PUBLIC_APP_NAME: JurisAgenda
+        BACKEND_URL: http://nginx
     container_name: jurisagenda_frontend
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost/api/v1
-      NEXT_PUBLIC_WS_URL: ws://localhost/ws
-      NEXT_PUBLIC_APP_NAME: JurisAgenda
       NODE_ENV: production
+      BACKEND_URL: http://nginx
     ports:
       - "3000:3000"
     networks:
