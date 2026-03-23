@@ -6,7 +6,13 @@ import type {
     Client, TVQueueState, TVCallRecord, Paginated,
 } from '@/types';
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || '/api/v1/';
+// 🛠️ AJUSTE SR: Verificação de ambiente (Servidor vs Cliente)
+const isServer = typeof window === 'undefined';
+
+// Se for servidor (Node/Docker), usa a URL interna. Se for cliente (Browser), usa a rota Nginx.
+const BASE = isServer 
+    ? `${process.env.BACKEND_URL || 'http://backend:8000'}/api/v1/` 
+    : (process.env.NEXT_PUBLIC_API_URL || '/api/v1/');
 
 // ── Axios instance ────────────────────────────────────────────────────
 export const api: AxiosInstance = axios.create({
@@ -37,14 +43,16 @@ api.interceptors.response.use(
 
             if (!rt) {
                 clearTokens();
-                if (typeof window !== 'undefined') window.location.href = '/login';
+                if (!isServer) window.location.href = '/login';
                 return Promise.reject(err);
             }
 
             if (refreshing) {
                 return new Promise((res) =>
                     queue.push((t) => {
-                        orig.headers.Authorization = `Bearer ${t}`;
+                        if (orig.headers) {
+                           orig.headers.Authorization = `Bearer ${t}`;
+                        }
                         res(api(orig));
                     })
                 );
@@ -52,15 +60,18 @@ api.interceptors.response.use(
 
             refreshing = true;
             try {
+                // Aqui sempre usa BASE dinâmico
                 const { data } = await axios.post(`${BASE}auth/token/refresh/`, { refresh: rt });
                 setTokens(data.access, rt);
                 queue.forEach((fn) => fn(data.access));
                 queue = [];
-                orig.headers.Authorization = `Bearer ${data.access}`;
+                if (orig.headers) {
+                    orig.headers.Authorization = `Bearer ${data.access}`;
+                }
                 return api(orig);
             } catch {
                 clearTokens();
-                if (typeof window !== 'undefined') window.location.href = '/login';
+                if (!isServer) window.location.href = '/login';
                 return Promise.reject(err);
             } finally {
                 refreshing = false;

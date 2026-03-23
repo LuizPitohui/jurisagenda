@@ -13,31 +13,31 @@ import { eventsApi, accountsApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 const schema = z.object({
-  title:          z.string().min(1, 'Título obrigatório'),
-  event_type:     z.enum(['AUDIENCIA', 'REUNIAO', 'PRAZO', 'CONTRATO']),
+  title: z.string().min(1, 'Título obrigatório'),
+  event_type: z.enum(['AUDIENCIA', 'REUNIAO', 'PRAZO', 'CONTRATO']),
   start_datetime: z.string().min(1, 'Data/hora obrigatória'),
-  end_datetime:   z.string().optional(),
-  video_link:     z.string().url('URL inválida').optional().or(z.literal('')),
-  supplier_name:  z.string().optional(),
-  due_date:       z.string().optional(),
-  client:         z.string().optional(),
+  end_datetime: z.string().optional(),
+  video_link: z.string().url('URL inválida').optional().or(z.literal('')),
+  supplier_name: z.string().optional(),
+  due_date: z.string().optional(),
+  client: z.string().optional(),
   process_number: z.string().optional(),
-  assigned_to:    z.string().min(1, 'Responsável obrigatório'),
-  tv_enabled:     z.boolean(),
-  tv_priority:    z.enum(['NORMAL', 'HIGH']),
-  notes:          z.string().optional(),
+  assigned_to: z.string().min(1, 'Responsável obrigatório'),
+  tv_enabled: z.boolean(),
+  tv_priority: z.enum(['NORMAL', 'HIGH']),
+  notes: z.string().optional(),
 }).superRefine((d, ctx) => {
   if (d.event_type === 'AUDIENCIA') {
     if (!d.end_datetime)
       ctx.addIssue({ code: 'custom', path: ['end_datetime'], message: 'Obrigatório para audiências' });
     if (!d.video_link)
-      ctx.addIssue({ code: 'custom', path: ['video_link'],   message: 'Obrigatório para audiências' });
+      ctx.addIssue({ code: 'custom', path: ['video_link'], message: 'Obrigatório para audiências' });
   }
   if (d.event_type === 'CONTRATO') {
     if (!d.supplier_name)
       ctx.addIssue({ code: 'custom', path: ['supplier_name'], message: 'Obrigatório para contratos' });
     if (!d.due_date)
-      ctx.addIssue({ code: 'custom', path: ['due_date'],      message: 'Obrigatório para contratos' });
+      ctx.addIssue({ code: 'custom', path: ['due_date'], message: 'Obrigatório para contratos' });
   }
   if (d.event_type === 'PRAZO' && !d.due_date)
     ctx.addIssue({ code: 'custom', path: ['due_date'], message: 'Obrigatório para prazos' });
@@ -47,40 +47,40 @@ type Form = z.infer<typeof schema>;
 
 const TYPE_COLORS = {
   AUDIENCIA: '#DC2626',
-  REUNIAO:   '#2563EB',
-  PRAZO:     '#CA8A04',
-  CONTRATO:  '#16A34A',
+  REUNIAO: '#2563EB',
+  PRAZO: '#CA8A04',
+  CONTRATO: '#16A34A',
 };
 
 const TYPE_LABELS = {
   AUDIENCIA: 'Audiência',
-  REUNIAO:   'Reunião',
-  PRAZO:     'Prazo',
-  CONTRATO:  'Contrato',
+  REUNIAO: 'Reunião',
+  PRAZO: 'Prazo',
+  CONTRATO: 'Contrato',
 };
 
 const TYPE_EMOJIS = {
   AUDIENCIA: '⚖️',
-  REUNIAO:   '👥',
-  PRAZO:     '⏰',
-  CONTRATO:  '📄',
+  REUNIAO: '👥',
+  PRAZO: '⏰',
+  CONTRATO: '📄',
 };
 
 export function EventModal() {
   const { open, hide, editId, preDate } = useEventModal();
-  const qc       = useQueryClient();
+  const qc = useQueryClient();
   const { user } = useAuth();
 
   const { data: users } = useQuery({
     queryKey: ['users'],
-    queryFn:  () => accountsApi.list(),
-    enabled:  open,
+    queryFn: () => accountsApi.list(),
+    enabled: open,
   });
 
   const { data: editing } = useQuery({
     queryKey: ['event', editId],
-    queryFn:  () => eventsApi.get(editId!),
-    enabled:  !!editId && open,
+    queryFn: () => eventsApi.get(editId!),
+    enabled: !!editId && open,
   });
 
   const {
@@ -92,10 +92,10 @@ export function EventModal() {
     setValue,
     formState: { errors },
   } = useForm<Form>({
-    resolver:      zodResolver(schema),
+    resolver: zodResolver(schema),
     defaultValues: {
-      event_type:  'AUDIENCIA',
-      tv_enabled:  false,
+      event_type: 'AUDIENCIA',
+      tv_enabled: false,
       tv_priority: 'NORMAL',
       assigned_to: user?.id ?? '',
     },
@@ -119,36 +119,55 @@ export function EventModal() {
       reset({
         ...editing,
         start_datetime: editing.start_datetime?.slice(0, 16) ?? '',
-        end_datetime:   editing.end_datetime?.slice(0, 16)   ?? '',
-        due_date:       editing.due_date    ?? '',
-        client:         editing.client      ?? '',
-        assigned_to:    editing.assigned_to,
+        end_datetime: editing.end_datetime?.slice(0, 16) ?? '',
+        due_date: editing.due_date ?? '',
+        client: editing.client ?? '',
+        assigned_to: editing.assigned_to,
       });
     }
   }, [editing, reset]);
 
   const mutation = useMutation({
-    mutationFn: (data: Form) => editId
-        ? eventsApi.update(editId, data as never)
-        : eventsApi.create(data as never),
+    mutationFn: (payload: any) => editId
+      ? eventsApi.update(editId, payload)
+      : eventsApi.create(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['calendar'] });
-      qc.invalidateQueries({ queryKey: ['events']   });
+      qc.invalidateQueries({ queryKey: ['events'] });
       toast.success(editId ? 'Evento atualizado!' : 'Evento criado com sucesso!');
       hide();
       reset();
     },
-    onError: () => toast.error('Erro ao salvar o evento.'),
+    onError: (error) => {
+      console.error("Erro na API:", error); // Adicionado para facilitar debug futuro no Docker
+      toast.error('Erro ao salvar o evento. Verifique os campos.');
+    },
   });
 
-  const onSubmit = (data: Form) => mutation.mutate(data);
+  const onSubmit = (data: Form) => {
+    // 🛠️ Sanitização: Convertendo valores vazios ("") para null.
+    const isAudienciaOrReuniao = data.event_type === 'AUDIENCIA' || data.event_type === 'REUNIAO';
+    const isContrato = data.event_type === 'CONTRATO';
+    const isPrazo = data.event_type === 'PRAZO';
 
-  // Visibilidade condicional dos campos por tipo
+    const payload = {
+      ...data,
+      end_datetime: (isAudienciaOrReuniao && data.end_datetime) ? data.end_datetime : null,
+      supplier_name: (isContrato && data.supplier_name) ? data.supplier_name : "",
+      due_date: ((isContrato || isPrazo) && data.due_date) ? data.due_date : null,
+      client: data.client ? data.client : null,
+      video_link: data.video_link || "",
+    };
+
+    mutation.mutate(payload);
+  };
+
+  // 🛠️ VARIÁVEL SHOW RESTAURADA: Ela controla o que aparece na tela
   const show = {
-    end:      eventType === 'AUDIENCIA' || eventType === 'REUNIAO',
-    video:    eventType === 'AUDIENCIA' || eventType === 'REUNIAO',
+    end: eventType === 'AUDIENCIA' || eventType === 'REUNIAO',
+    video: eventType === 'AUDIENCIA' || eventType === 'REUNIAO',
     supplier: eventType === 'CONTRATO',
-    due:      eventType === 'CONTRATO'  || eventType === 'PRAZO',
+    due: eventType === 'CONTRATO' || eventType === 'PRAZO',
   };
 
   if (!open) return null;
@@ -163,7 +182,7 @@ export function EventModal() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{    opacity: 0 }}
+          exit={{ opacity: 0 }}
           className="absolute inset-0 bg-navy-950/40 backdrop-blur-sm"
           onClick={() => { hide(); reset(); }}
         />
@@ -171,8 +190,8 @@ export function EventModal() {
         {/* Modal */}
         <motion.div
           initial={{ opacity: 0, y: 24, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0,  scale: 1    }}
-          exit={{    opacity: 0, y: 12               }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 12 }}
           transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
           className="relative bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto z-10"
           style={{ boxShadow: 'var(--shadow-modal)' }}
@@ -244,9 +263,9 @@ export function EventModal() {
                 className={cn('field-input', errors.title && 'error')}
                 placeholder={
                   eventType === 'AUDIENCIA' ? 'Ex: Audiência de Instrução – Proc. 1234'
-                  : eventType === 'REUNIAO'  ? 'Ex: Reunião com cliente sobre contrato'
-                  : eventType === 'PRAZO'    ? 'Ex: Prazo recursal – Proc. 5678'
-                  : 'Ex: Contrato de prestação de serviços'
+                    : eventType === 'REUNIAO' ? 'Ex: Reunião com cliente sobre contrato'
+                      : eventType === 'PRAZO' ? 'Ex: Prazo recursal – Proc. 5678'
+                        : 'Ex: Contrato de prestação de serviços'
                 }
               />
               {errors.title && <p className="field-error">{errors.title.message}</p>}
