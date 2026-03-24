@@ -14,13 +14,13 @@ class EventListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = [
+        fields = (
             "id", "title", "event_type", "start_datetime", "end_datetime",
             "status", "tv_enabled", "tv_code", "tv_priority",
             "color_tag", "assigned_to", "assigned_to_name",
             "client", "client_code", "deadline_approaching",
-        ]
-        read_only_fields = ["id", "tv_code"]
+        )
+        read_only_fields = ("id", "tv_code")
 
 
 class EventDetailSerializer(serializers.ModelSerializer):
@@ -31,29 +31,32 @@ class EventDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = [
+        fields = (
             "id", "title", "event_type", "start_datetime", "end_datetime",
             "location", "notes", "color_tag",
             "video_link", "supplier_name", "due_date",
             "client", "client_data", "process_number",
             "assigned_to", "assigned_to_data",
             "tv_enabled", "tv_priority", "tv_code", "tv_call_confirmed",
+            "tv_advance_value", "tv_advance_unit",
             "status", "is_overdue_for_followup", "deadline_approaching",
             "created_at", "updated_at",
-        ]
-        read_only_fields = ["id", "tv_code", "tv_call_confirmed", "created_at", "updated_at"]
+        )
+        read_only_fields = ("id", "tv_code", "tv_call_confirmed", "created_at", "updated_at")
 
 
 class EventCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
-        fields = [
+        # 🛠️ CORREÇÃO: fields agora está indentado dentro do Meta e usando tupla
+        fields = (
             "title", "event_type", "start_datetime", "end_datetime",
             "location", "notes", "color_tag",
             "video_link", "supplier_name", "due_date",
             "client", "process_number", "assigned_to",
             "tv_enabled", "tv_priority",
-        ]
+            "tv_advance_value", "tv_advance_unit",
+        )
 
     def validate(self, attrs):
         event_type = attrs.get("event_type")
@@ -95,12 +98,14 @@ class EventCreateSerializer(serializers.ModelSerializer):
 class EventUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
-        fields = [
+        # 🛠️ CORREÇÃO: fields agora está indentado dentro do Meta e usando tupla
+        fields = (
             "title", "start_datetime", "end_datetime", "location",
             "notes", "color_tag", "video_link", "supplier_name",
             "due_date", "client", "process_number", "assigned_to",
             "tv_enabled", "tv_priority", "status",
-        ]
+            "tv_advance_value", "tv_advance_unit",
+        )
 
     def update(self, instance, validated_data):
         from .services import EventService
@@ -113,8 +118,8 @@ class CalendarEventSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Event
-        fields = [
+        fields = (
             "id", "title", "event_type", "start_datetime",
             "status", "color_tag", "tv_enabled", "assigned_to",
             "needs_followup",
-        ]
+        )

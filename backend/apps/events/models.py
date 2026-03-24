@@ -118,6 +118,28 @@ class Event(BaseModel):
         default=TVPriority.NORMAL,
         verbose_name="Prioridade TV",
     )
+    
+    # 🛠️ NOVOS CAMPOS: Antecedência da Chamada TV
+    class TVAdvanceUnit(models.TextChoices):
+        MINUTES = "MINUTES", "Minutos"
+        HOURS = "HOURS", "Horas"
+        DAYS = "DAYS", "Dias"
+
+    tv_advance_value = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Valor de Antecedência TV",
+    )
+    tv_advance_unit = models.CharField(
+        max_length=10,
+        choices=TVAdvanceUnit.choices,
+        default=TVAdvanceUnit.MINUTES,
+        verbose_name="Unidade de Antecedência",
+    )
+    tv_call_triggered = models.BooleanField(
+        default=False,
+        verbose_name="Chamada TV Automática Realizada",
+    )
+
     tv_code = models.CharField(max_length=10, blank=True, db_index=True, verbose_name="Código TV")
     tv_call_confirmed = models.BooleanField(default=False, verbose_name="Chamada TV confirmada")
 

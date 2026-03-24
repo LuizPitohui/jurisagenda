@@ -25,6 +25,8 @@ const schema = z.object({
   assigned_to: z.string().min(1, 'Responsável obrigatório'),
   tv_enabled: z.boolean(),
   tv_priority: z.enum(['NORMAL', 'HIGH']),
+  tv_advance_value: z.coerce.number().min(0).default(0), // O valor numérico (0, 15, 2, etc)
+  tv_advance_unit:  z.enum(['MINUTES', 'HOURS', 'DAYS']).default('MINUTES'), // A unidade de tempo
   notes: z.string().optional(),
 }).superRefine((d, ctx) => {
   if (d.event_type === 'AUDIENCIA') {
@@ -94,9 +96,11 @@ export function EventModal() {
   } = useForm<Form>({
     resolver: zodResolver(schema),
     defaultValues: {
-      event_type: 'AUDIENCIA',
-      tv_enabled: false,
+      event_type:  'AUDIENCIA',
+      tv_enabled:  false,
       tv_priority: 'NORMAL',
+      tv_advance_value: 0,
+      tv_advance_unit: 'MINUTES',
       assigned_to: user?.id ?? '',
     },
   });
@@ -118,11 +122,13 @@ export function EventModal() {
     if (editing) {
       reset({
         ...editing,
-        start_datetime: editing.start_datetime?.slice(0, 16) ?? '',
-        end_datetime: editing.end_datetime?.slice(0, 16) ?? '',
-        due_date: editing.due_date ?? '',
-        client: editing.client ?? '',
-        assigned_to: editing.assigned_to,
+        start_datetime:   editing.start_datetime?.slice(0, 16) ?? '',
+        end_datetime:     editing.end_datetime?.slice(0, 16)   ?? '',
+        due_date:         editing.due_date    ?? '',
+        client:           editing.client      ?? '',
+        assigned_to:      editing.assigned_to,
+        tv_advance_value: editing.tv_advance_value ?? 0,
+        tv_advance_unit:  editing.tv_advance_unit ?? 'MINUTES',
       });
     }
   }, [editing, reset]);
@@ -415,45 +421,73 @@ export function EventModal() {
                 />
               </div>
 
-              {/* Prioridade (condicional ao tv_enabled) */}
+              {/* Prioridade e Antecedência (condicional ao tv_enabled) */}
               {tvEnabled && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
-                  className="mt-4 pt-4 border-t"
+                  className="mt-4 pt-4 border-t space-y-4"
                   style={{ borderColor: '#e2d9c8' }}
                 >
-                  <label className="field-label mb-2">Prioridade da Chamada</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(['NORMAL', 'HIGH'] as const).map((p) => (
-                      <label
-                        key={p}
-                        className={cn(
-                          'flex items-center gap-2 p-3 rounded-xl border-2',
-                          'cursor-pointer transition-all text-sm font-medium',
-                        )}
-                        style={
-                          tvPriority === p
-                            ? { borderColor: '#0e1e2e', background: '#f0f4f9', color: '#0e1e2e' }
-                            : { borderColor: '#e2d9c8', color: '#a89e90' }
-                        }
+                  <div>
+                    <label className="field-label mb-2">Prioridade da Chamada</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['NORMAL', 'HIGH'] as const).map((p) => (
+                        <label
+                          key={p}
+                          className={cn(
+                            'flex items-center gap-2 p-3 rounded-xl border-2',
+                            'cursor-pointer transition-all text-sm font-medium',
+                          )}
+                          style={
+                            tvPriority === p
+                              ? { borderColor: '#0e1e2e', background: '#f0f4f9', color: '#0e1e2e' }
+                              : { borderColor: '#e2d9c8', color: '#a89e90' }
+                          }
+                        >
+                          <input
+                            type="radio"
+                            {...register('tv_priority')}
+                            value={p}
+                            className="sr-only"
+                          />
+                          <span>{p === 'NORMAL' ? '📢' : '🔔'}</span>
+                          {p === 'NORMAL' ? 'Normal (Toca 1x)' : 'Alta (Insistente)'}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 🛠️ NOVO CAMPO: Antecedência Dinâmica */}
+                  <div>
+                    <label className="field-label">Lembrar com antecedência de:</label>
+                    <div className="flex gap-3 items-center">
+                      <input
+                        type="number"
+                        min="0"
+                        {...register('tv_advance_value')}
+                        className={cn('field-input w-24 text-center', errors.tv_advance_value && 'error')}
+                        placeholder="Ex: 15"
+                      />
+                      <select
+                        {...register('tv_advance_unit')}
+                        className="field-input flex-1"
                       >
-                        <input
-                          type="radio"
-                          {...register('tv_priority')}
-                          value={p}
-                          className="sr-only"
-                        />
-                        <span>{p === 'NORMAL' ? '📢' : '🔔'}</span>
-                        {p === 'NORMAL' ? 'Normal (1x)' : 'Alta (repete 30s)'}
-                      </label>
-                    ))}
+                        <option value="MINUTES">Minutos</option>
+                        <option value="HOURS">Horas</option>
+                        <option value="DAYS">Dias</option>
+                      </select>
+                    </div>
+                    {/* Mensagem de ajuda dinâmica */}
+                    {watch('tv_advance_value') == 0 && (
+                      <p className="text-xs text-amber-600 mt-1">A chamada será feita no exato horário do evento.</p>
+                    )}
                   </div>
 
                   {tvPriority === 'HIGH' && (
-                    <div className="flex items-start gap-2 mt-3 p-3 rounded-xl bg-amber-50 text-amber-800 text-xs">
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 text-amber-800 text-xs">
                       <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-                      A chamada será repetida a cada 30s até confirmação do advogado.
+                      A chamada repetirá a cada 30 segundos até que alguém confirme a ciência no painel.
                     </div>
                   )}
                 </motion.div>
