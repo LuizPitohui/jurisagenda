@@ -9,9 +9,9 @@ import type { WSMessage } from '@/types';
 
 const ICONS = {
   AUDIENCIA: Gavel,
-  REUNIAO:   Users,
-  PRAZO:     Clock,
-  CONTRATO:  FileText,
+  REUNIAO: Users,
+  PRAZO: Clock,
+  CONTRATO: FileText,
 };
 
 function Clock24() {
@@ -28,7 +28,7 @@ function Clock24() {
   }, []);
 
   return (
-    <span className="font-mono text-3xl font-bold tracking-widest text-white/80">
+    <span className="font-mono text-3xl font-bold tracking-widest text-gray-800">
       {time}
     </span>
   );
@@ -54,55 +54,55 @@ export default function TVPage() {
 
   const speakTTS = (text: string) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    const utter  = new SpeechSynthesisUtterance(text);
-    utter.lang   = 'pt-BR';
-    utter.rate   = 0.9;
-    utter.pitch  = 1.0;
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'pt-BR';
+    utter.rate = 0.9;
+    utter.pitch = 1.0;
     setSpeaking(true);
-    utter.onend  = () => setSpeaking(false);
+    utter.onend = () => setSpeaking(false);
     window.speechSynthesis.speak(utter);
   };
 
-  const activeCfg  = active  ? EVENT_CONFIG[active.event_type]  : null;
-  const ActiveIcon = active  ? ICONS[active.event_type]         : null;
+  const activeCfg = active ? EVENT_CONFIG[active.event_type] : null;
+  const ActiveIcon = active ? ICONS[active.event_type] : null;
 
   return (
-    <div className="tv-screen select-none">
+    // 🛠️ MUDANÇA: Fundo claro e elegante (#f8fafc slate-50)
+    <div className="tv-screen select-none bg-slate-50 text-gray-900 overflow-hidden">
 
-      {/* Efeitos visuais de tela */}
-      <div className="tv-scan-line"  />
-      <div className="tv-vignette"   />
+      {/* Efeitos visuais suaves para tela clara */}
+      <div className="tv-scan-line opacity-5" />
+      <div className="tv-vignette opacity-20 bg-gradient-to-t from-gray-200 to-transparent mix-blend-multiply" />
 
       {/* Conteúdo principal */}
       <div className="relative z-10 flex h-screen">
 
         {/* ── Área central (chamada ativa) ── */}
-        <div className="flex-1 flex flex-col items-center justify-center px-16">
+        <div className="relative flex-1 flex flex-col items-center justify-center px-16">
 
           {/* Header */}
           <div className="absolute top-8 left-8 right-8 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)' }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center bg-white shadow-sm border border-gray-200"
               >
-                <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 text-white">
+                <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 text-gray-800">
                   <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
                 </svg>
               </div>
               <div>
-                <p className="text-white font-serif font-bold text-lg leading-none">JurisAgenda</p>
-                <p className="text-white/40 text-xs uppercase tracking-widest">Recepção</p>
+                <p className="text-gray-900 font-serif font-bold text-lg leading-none">JurisAgenda</p>
+                <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold">Recepção</p>
               </div>
             </div>
 
             <div className="flex items-center gap-6">
               <div
-                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full"
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full"
                 style={
                   connected
-                    ? { background: 'rgba(22,163,74,0.2)',  color: '#4ade80', border: '1px solid rgba(22,163,74,0.3)'  }
-                    : { background: 'rgba(220,38,38,0.2)',  color: '#f87171', border: '1px solid rgba(220,38,38,0.3)'  }
+                    ? { background: '#dcfce7', color: '#166534', border: '1px solid #bbf7d0' }
+                    : { background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }
                 }
               >
                 {connected ? <Wifi size={11} /> : <WifiOff size={11} />}
@@ -118,29 +118,28 @@ export default function TVPage() {
               <motion.div
                 key={active.code}
                 initial={{ opacity: 0, scale: 0.8, y: 30 }}
-                animate={{ opacity: 1, scale: 1,   y: 0  }}
-                exit={{    opacity: 0, scale: 0.9,  y: -20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: -20 }}
                 transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
                 className="text-center"
               >
                 {/* Ícone do tipo */}
                 <div
-                  className="mx-auto mb-8 w-24 h-24 rounded-3xl flex items-center justify-center"
+                  className="mx-auto mb-8 w-32 h-32 rounded-3xl flex items-center justify-center bg-white"
                   style={{
-                    background: activeCfg.color + '20',
-                    border:     `2px solid ${activeCfg.color}40`,
-                    boxShadow:  `0 0 60px ${activeCfg.color}30`,
+                    border: `1px solid ${activeCfg.color}40`,
+                    boxShadow: `0 20px 50px -10px ${activeCfg.color}40, 0 0 100px ${activeCfg.color}20`,
                   }}
                 >
                   <ActiveIcon
-                    size={48}
+                    size={64}
                     style={{ color: activeCfg.color }}
                   />
                 </div>
 
                 {/* Tipo de evento */}
                 <p
-                  className="text-2xl font-semibold mb-4 uppercase tracking-[0.2em]"
+                  className="text-3xl font-bold mb-4 uppercase tracking-[0.2em]"
                   style={{ color: activeCfg.color }}
                 >
                   {activeCfg.label}
@@ -148,10 +147,12 @@ export default function TVPage() {
 
                 {/* Código principal */}
                 <div
-                  className="tv-code mb-6"
+                  className="tv-code mb-8 font-serif font-black tracking-tighter"
                   style={{
-                    color:      activeCfg.color,
-                    textShadow: `0 0 80px ${activeCfg.color}50`,
+                    color: '#111827', // Texto bem escuro para contraste
+                    fontSize: '12rem',
+                    lineHeight: '1',
+                    textShadow: `0 10px 30px ${activeCfg.color}30`,
                   }}
                 >
                   {active.code}
@@ -162,8 +163,8 @@ export default function TVPage() {
                   <motion.div
                     animate={{ opacity: [1, 0.4, 1] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider"
-                    style={{ background: 'rgba(220,38,38,0.2)', color: '#f87171', border: '1px solid rgba(220,38,38,0.4)' }}
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-bold uppercase tracking-wider"
+                    style={{ background: '#fee2e2', color: '#b91c1c', border: '2px solid #fca5a5' }}
                   >
                     🔔 Alta Prioridade
                   </motion.div>
@@ -171,7 +172,7 @@ export default function TVPage() {
 
                 {/* Indicador de voz */}
                 {speaking && (
-                  <div className="mt-6 flex justify-center">
+                  <div className="mt-8 flex justify-center">
                     <div className="wave-bars" style={{ color: activeCfg.color }}>
                       <span /><span /><span /><span /><span />
                     </div>
@@ -183,18 +184,17 @@ export default function TVPage() {
                 key="idle"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{    opacity: 0 }}
+                exit={{ opacity: 0 }}
                 className="text-center"
               >
                 <div
-                  className="mx-auto mb-8 w-32 h-32 rounded-full flex items-center justify-center"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                  className="mx-auto mb-8 w-40 h-40 rounded-full flex items-center justify-center bg-white shadow-sm border border-gray-100"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" className="w-16 h-16 opacity-20">
-                    <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="white" strokeWidth="1" strokeLinejoin="round" />
+                  <svg viewBox="0 0 24 24" fill="none" className="w-20 h-20 text-gray-200">
+                    <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
                   </svg>
                 </div>
-                <p className="text-white/20 text-2xl font-serif">
+                <p className="text-gray-400 text-3xl font-serif font-medium">
                   Aguardando chamadas…
                 </p>
               </motion.div>
@@ -204,48 +204,45 @@ export default function TVPage() {
 
         {/* ── Painel lateral: histórico ── */}
         <div
-          className="w-80 h-full flex flex-col border-l p-6"
-          style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.03)' }}
+          className="w-96 h-full flex flex-col border-l border-gray-200 p-8 bg-white/50 backdrop-blur-sm"
         >
           <p
-            className="text-xs font-bold uppercase tracking-[0.2em] mb-6"
-            style={{ color: 'rgba(255,255,255,0.3)' }}
+            className="text-xs font-bold uppercase tracking-[0.2em] mb-8 text-gray-500"
           >
             Últimas Chamadas
           </p>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <AnimatePresence>
               {history.length === 0 ? (
-                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                <p className="text-sm text-gray-400 italic text-center mt-10">
                   Sem histórico ainda
                 </p>
               ) : (
                 history.map((call, i) => {
-                  const hCfg  = EVENT_CONFIG[call.event_type];
+                  const hCfg = EVENT_CONFIG[call.event_type];
                   const HIcon = ICONS[call.event_type];
                   return (
                     <motion.div
                       key={`${call.code}-${i}`}
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1 - i * 0.25, x: 0 }}
-                      className="flex items-center gap-3 p-3 rounded-xl"
-                      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                      className="flex items-center gap-4 p-4 rounded-2xl bg-white shadow-sm border border-gray-100"
                     >
                       <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: hCfg.color + '20', color: hCfg.color }}
+                        className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: hCfg.color + '15', color: hCfg.color }}
                       >
-                        <HIcon size={16} />
+                        <HIcon size={24} />
                       </div>
                       <div>
                         <p
-                          className="font-serif font-bold text-lg leading-none"
-                          style={{ color: hCfg.color }}
+                          className="font-serif font-bold text-2xl leading-none"
+                          style={{ color: '#1f2937' }}
                         >
                           {call.code}
                         </p>
-                        <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+                        <p className="text-sm mt-1 font-medium" style={{ color: hCfg.color }}>
                           {hCfg.label}
                         </p>
                       </div>
@@ -257,8 +254,8 @@ export default function TVPage() {
           </div>
 
           {/* Rodapé LGPD */}
-          <div className="mt-auto pt-6 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-            <p className="text-[10px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          <div className="mt-auto pt-6 border-t border-gray-200">
+            <p className="text-[11px] leading-relaxed text-gray-400 text-justify">
               Este painel exibe apenas códigos anônimos. Nenhum dado pessoal é exposto. Em conformidade com a LGPD — Lei nº 13.709/2018.
             </p>
           </div>
