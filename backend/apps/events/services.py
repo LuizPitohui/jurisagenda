@@ -91,6 +91,9 @@ class EventService:
     @staticmethod
     @transaction.atomic
     def confirm_tv_call(event: Event, confirmed_by) -> Event:
+        from tv.services import TVService
         event.tv_call_confirmed = True
         event.save(update_fields=["tv_call_confirmed", "updated_at"])
+        # Sincroniza com o log do painel TV para parar resends
+        TVService.confirm_call(event.tv_code)
         return event

@@ -22,13 +22,15 @@ from .models import EventDocument
 logger = logging.getLogger(__name__)
 
 
-def _get_s3_client():
+def _get_s3_client(endpoint_url: Optional[str] = None):
     """Retorna cliente boto3 configurado para o MinIO."""
+    if not endpoint_url:
+        endpoint_url = (
+            f"{'https' if settings.MINIO_USE_SSL else 'http'}://{settings.MINIO_ENDPOINT}"
+        )
     return boto3.client(
         "s3",
-        endpoint_url=(
-            f"{'https' if settings.MINIO_USE_SSL else 'http'}://{settings.MINIO_ENDPOINT}"
-        ),
+        endpoint_url=endpoint_url,
         aws_access_key_id=settings.MINIO_ACCESS_KEY,
         aws_secret_access_key=settings.MINIO_SECRET_KEY,
         region_name="us-east-1",  # MinIO ignora region mas boto3 exige
@@ -75,7 +77,8 @@ class DocumentService:
         minio_key = f"events/{event_id}/{uuid.uuid4()}/{file_name}"
 
         try:
-            s3 = _get_s3_client()
+            # TC-007: Usa endpoint público para presigned URLs se configurado (Docker split-horizon fix)
+            s3 = _get_s3_client(endpoint_url=settings.MINIO_PUBLIC_ENDPOINT)
             presigned_url = s3.generate_presigned_url(
                 "put_object",
                 Params={
@@ -139,7 +142,8 @@ class DocumentService:
         TC-005: deve retornar redirect 302 com URL válida.
         """
         try:
-            s3 = _get_s3_client()
+            # Usa endpoint público para presigned URLs
+            s3 = _get_s3_client(endpoint_url=settings.MINIO_PUBLIC_ENDPOINT)
             url = s3.generate_presigned_url(
                 "get_object",
                 Params={

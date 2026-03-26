@@ -29,6 +29,7 @@ class TVService:
         return {
             "type": "tv.call",
             "payload": {
+                "event_id": str(event.id),
                 "code": event.tv_code,
                 "event_type": event.event_type,
                 "priority": event.tv_priority,
@@ -75,10 +76,10 @@ class TVService:
         return str(n)
 
     @staticmethod
-    def broadcast_call(payload: dict) -> None:
+    def broadcast_call(payload: dict, persist: bool = True) -> None:
         """
         Envia mensagem para todos os consumers WebSocket conectados ao grupo TV.
-        Persiste o log da chamada no banco.
+        Persiste o log da chamada no banco (se persist=True).
         """
         channel_layer = get_channel_layer()
         try:
@@ -88,8 +89,9 @@ class TVService:
             logger.error("Falha no broadcast TV: %s", exc)
             raise
 
-        # Persiste log (sem dados pessoais)
-        TVService._persist_call_log(payload["payload"])
+        # Persiste log (sem dados pessoais) se solicitado
+        if persist:
+            TVService._persist_call_log(payload["payload"])
 
     @staticmethod
     def _persist_call_log(payload: dict) -> None:
@@ -97,12 +99,14 @@ class TVService:
         from events.models import Event
 
         try:
+            from .models import TVCallStatus
             event = Event.objects.filter(tv_code=payload["code"]).first()
             TVCallLog.objects.create(
                 tv_code=payload["code"],
                 event_type=payload["event_type"],
                 priority=payload["priority"],
                 event=event,
+                status=TVCallStatus.CALLED,
             )
         except Exception as exc:
             logger.warning("Falha ao persistir TVCallLog: %s", exc)

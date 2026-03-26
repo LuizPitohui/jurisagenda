@@ -1,14 +1,18 @@
 'use client';
-import { Monitor, Wifi, WifiOff, Radio, Clock } from 'lucide-react';
+import { Monitor, Wifi, WifiOff, Radio, Clock, CheckCircle2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTV } from '@/store';
 import { fmtTime, EVENT_CONFIG } from '@/lib/utils';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { eventsApi } from '@/lib/api';
+import { toast } from 'sonner';
 import type { WSMessage } from '@/types';
 
 export function TVQueuePanel() {
   const { active, history, speaking, setCall, confirm, setSpeaking } = useTV();
 
+  const qc = useQueryClient();
   const { connected } = useWebSocket('/ws/tv/', {
     onMessage: (msg: WSMessage) => {
       if (msg.type === 'tv.call') {
@@ -19,6 +23,18 @@ export function TVQueuePanel() {
         confirm(msg.payload.code);
       }
     },
+  });
+
+  const mutation = useMutation({
+    mutationFn: (id: string) => eventsApi.confirmCall(id),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries({ queryKey: ['calendar'] });
+      qc.invalidateQueries({ queryKey: ['event', id] });
+      toast.success('Chamada confirmada com sucesso!');
+    },
+    onError: () => {
+      toast.error('Erro ao confirmar chamada.');
+    }
   });
 
   const speakTTS = (text: string) => {
@@ -92,9 +108,25 @@ export function TVQueuePanel() {
               </p>
 
               {active.priority === 'HIGH' && (
-                <span className="inline-flex items-center gap-1 mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
-                  <Radio size={8} /> ALTA PRIORIDADE
-                </span>
+                <div className="mt-4 flex flex-col gap-2">
+                  <span className="inline-flex items-center justify-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                    <Radio size={8} /> ALTA PRIORIDADE
+                  </span>
+                  
+                  {/* Botão Ciente */}
+                  <button
+                    onClick={() => mutation.mutate(active.event_id)}
+                    disabled={mutation.isPending}
+                    className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-white border-2 border-red-200 text-red-700 text-xs font-bold hover:bg-red-50 transition-colors disabled:opacity-50"
+                  >
+                    {mutation.isPending ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <CheckCircle2 size={14} />
+                    )}
+                    MARCAR COMO CIENTE
+                  </button>
+                </div>
               )}
 
               {speaking && (

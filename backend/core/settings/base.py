@@ -231,6 +231,7 @@ CELERY_TASK_ROUTES = {
 # MinIO / S3
 # ---------------------------------------------------------------------------
 MINIO_ENDPOINT = env("MINIO_ENDPOINT", default="localhost:9000")
+MINIO_PUBLIC_ENDPOINT = env("MINIO_PUBLIC_ENDPOINT", default=f"{'https' if env.bool('MINIO_USE_SSL', default=False) else 'http'}://localhost:9000")
 MINIO_ACCESS_KEY = env("MINIO_ACCESS_KEY", default="minioadmin")
 MINIO_SECRET_KEY = env("MINIO_SECRET_KEY", default="minioadmin")
 MINIO_BUCKET = env("MINIO_BUCKET", default="jurisagenda-docs")

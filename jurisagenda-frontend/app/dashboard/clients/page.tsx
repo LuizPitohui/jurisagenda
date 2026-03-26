@@ -18,7 +18,7 @@ const schema = z.object({
   phone:                   z.string().optional(),
   notes:                   z.string().optional(),
   consent_given:           z.boolean().refine((v) => v, 'Consentimento obrigatório'),
-  consent_policy_version:  z.string(),
+  consent_policy_version:  z.string().optional(),
 });
 type Form = z.infer<typeof schema>;
 

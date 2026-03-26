@@ -40,6 +40,6 @@ class TVClearQueueView(APIView):
 
     def post(self, request):
         updated = TVCallLog.objects.todays_calls().filter(
-            status=TVCallStatus.PENDING
+            status__in=[TVCallStatus.PENDING, TVCallStatus.CALLED]
         ).update(status=TVCallStatus.EXPIRED)
         return Response({"detail": f"{updated} chamadas expiradas."})
