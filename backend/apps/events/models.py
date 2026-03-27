@@ -53,10 +53,12 @@ class EventManager(models.Manager):
 
     def pending_followup(self):
         """
-        Eventos SCHEDULED que passaram do horário + 30min e não têm follow-up.
+        Eventos SCHEDULED que passaram do horário + delay configurado e não têm follow-up.
         Usado pela task Celery de verificação automática.
         """
-        threshold = timezone.now() - timedelta(minutes=30)
+        from django.conf import settings
+        delay = getattr(settings, "TV_FOLLOWUP_CHECK_DELAY_MINUTES", 30)
+        threshold = timezone.now() - timedelta(minutes=delay)
         return (
             self.filter(status=EventStatus.SCHEDULED, start_datetime__lte=threshold)
             .prefetch_related("followup")
@@ -182,8 +184,10 @@ class Event(BaseModel):
 
     @property
     def is_overdue_for_followup(self) -> bool:
-        """True se passou 30min do início e não tem follow-up registrado."""
-        threshold = self.start_datetime + timedelta(minutes=30)
+        """True se passou o delay configurado do início e não tem follow-up registrado."""
+        from django.conf import settings
+        delay = getattr(settings, "TV_FOLLOWUP_CHECK_DELAY_MINUTES", 30)
+        threshold = self.start_datetime + timedelta(minutes=delay)
         return (
             self.status == EventStatus.SCHEDULED
             and timezone.now() > threshold

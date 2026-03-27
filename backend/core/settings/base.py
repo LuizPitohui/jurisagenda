@@ -291,4 +291,4 @@ TV_CODE_PREFIXES = {
     "CONTRATO": "C",
 }
 TV_HIGH_PRIORITY_RESEND_INTERVAL = 30  # segundos
-TV_FOLLOWUP_CHECK_DELAY_MINUTES = 30   # minutos após horário do evento
+TV_FOLLOWUP_CHECK_DELAY_MINUTES = 5    # minutos após horário do evento
