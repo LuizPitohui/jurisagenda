@@ -47,6 +47,7 @@ class EventFollowUp(BaseModel):
         verbose_name="Resultado",
     )
     notes = models.TextField(blank=True, verbose_name="Observações")
+    failure_reason = models.TextField(blank=True, verbose_name="Motivo da falha")
     next_event = models.ForeignKey(
         "events.Event",
         on_delete=models.SET_NULL,

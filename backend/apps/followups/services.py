@@ -20,7 +20,7 @@ class FollowUpService:
 
     @staticmethod
     @transaction.atomic
-    def create_followup(created_by, event: Event, outcome: str, notes: str = "") -> EventFollowUp:
+    def create_followup(created_by, event: Event, outcome: str, notes: str = "", failure_reason: str = "") -> EventFollowUp:
         """
         Cria follow-up e registra a entrada inicial na timeline.
         TC-003: outcome=SUCCESS deve criar entrada com timestamp e actor.
@@ -29,6 +29,7 @@ class FollowUpService:
             event=event,
             outcome=outcome,
             notes=notes,
+            failure_reason=failure_reason,
             created_by=created_by,
         )
 
@@ -40,9 +41,13 @@ class FollowUpService:
 
         # Entrada do resultado informado pelo advogado
         outcome_label = dict(OutcomeChoices.choices).get(outcome, outcome)
+        entry_text = f"Advogado confirmou: {outcome_label}"
+        if failure_reason:
+            entry_text += f" (Motivo: {failure_reason})"
+        
         followup.add_timeline_entry(
             actor_email=created_by.email,
-            entry=f"Advogado confirmou: {outcome_label}",
+            entry=entry_text,
         )
 
         # Atualiza status do evento conforme resultado

@@ -40,8 +40,22 @@ export function FollowUpModal() {
     onSuccess: (data, outcome) => {
       setFollowUpId(data.id);
       qc.invalidateQueries({ queryKey: ['calendar'] });
-      if (outcome === 'SUCCESS') setStep('schedule_next');
-      else                       setStep('failure_reason');
+      qc.invalidateQueries({ queryKey: ['followups'] });
+      
+      if (outcome === 'SUCCESS') {
+        setStep('schedule_next');
+      } else {
+        // Se já está no passo de failure_reason, significa que o usuário clicou em 'Sim, remarcar' ou 'Não remarcar'
+        if (step === 'failure_reason') {
+           // Se o usuário quer remarcar, vai para o form de reschedule
+           // Note: O botão 'Sim, remarcar' chama outcomeMutation.mutate('FAILURE')
+           // Precisamos saber se ele clicou em remarcar ou não.
+           // Vou ajustar a lógica do botão para setar um estado temporário ou usar o step atual.
+           setStep('reschedule');
+        } else {
+           setStep('failure_reason');
+        }
+      }
     },
     onError: () => toast.error('Erro ao registrar follow-up.'),
   });
@@ -262,9 +276,17 @@ export function FollowUpModal() {
                           toast.error('Informe o motivo antes de continuar.');
                           return;
                         }
-                        outcomeMutation.mutate('FAILURE');
-                        toast.success('Follow-up registrado.');
-                        handleClose();
+                        // Registra o follow-up e fecha o modal sem remarcar
+                        followupsApi.create({
+                          event: payload!.event_id,
+                          outcome: 'FAILURE',
+                          failure_reason: failureReason,
+                        }).then(() => {
+                          qc.invalidateQueries({ queryKey: ['calendar'] });
+                          qc.invalidateQueries({ queryKey: ['followups'] });
+                          toast.success('Follow-up registrado.');
+                          handleClose();
+                        }).catch(() => toast.error('Erro ao registrar follow-up.'));
                       }}
                       className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-slate-200 hover:border-slate-400 bg-slate-50 text-slate-600 transition-all font-semibold text-sm"
                     >
