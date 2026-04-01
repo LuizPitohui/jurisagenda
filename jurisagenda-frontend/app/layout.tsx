@@ -31,6 +31,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/logo-norte.png" type="image/png" />
+      </head>
       <body
         className={`
           ${serif.variable}

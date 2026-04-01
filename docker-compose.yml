@@ -31,11 +31,9 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-jurisagenda}
       POSTGRES_USER: ${DB_USER:-jurisagenda_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-senha_segura}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-jurisagenda_pass}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     networks:
       - jurisagenda_net
     healthcheck:
@@ -109,6 +107,7 @@ services:
     container_name: jurisagenda_backend
     command: >
       sh -c "python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput &&
       gunicorn core.asgi:application --worker-class uvicorn.workers.UvicornWorker --workers 4 --bind 0.0.0.0:8000 --timeout 120"
     ports:
       - "8000:8000"
@@ -141,6 +140,7 @@ services:
         NEXT_PUBLIC_WS_URL: ""
         NEXT_PUBLIC_APP_NAME: JurisAgenda
         BACKEND_URL: http://nginx
+        NEXT_PUBLIC_GOOGLE_TTS_KEY: ""
     container_name: jurisagenda_frontend
     environment:
       NODE_ENV: production

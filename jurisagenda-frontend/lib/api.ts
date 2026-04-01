@@ -1,18 +1,29 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
-import Cookies from 'js-cookie';
 import type {
     AuthTokens, User, Event, CalendarEvent,
     FollowUp, EventDocument, PresignedUploadResponse,
     Client, TVQueueState, TVCallRecord, Paginated,
 } from '@/types';
 
-// 🛠️ AJUSTE SR: Verificação de ambiente (Servidor vs Cliente)
 const isServer = typeof window === 'undefined';
 
-// Se for servidor (Node/Docker), usa a URL interna. Se for cliente (Browser), usa a rota Nginx.
 const BASE = isServer 
     ? `${process.env.BACKEND_URL || 'http://backend:8000'}/api/v1/` 
     : (process.env.NEXT_PUBLIC_API_URL || '/api/v1/');
+
+// ── Helpers de token (sessionStorage → some ao fechar a aba) ─────────
+export const setTokens = (a: string, r: string) => {
+    if (isServer) return;
+    sessionStorage.setItem('access', a);
+    sessionStorage.setItem('refresh', r);
+};
+export const clearTokens = () => {
+    if (isServer) return;
+    sessionStorage.removeItem('access');
+    sessionStorage.removeItem('refresh');
+};
+export const getAccess  = () => isServer ? null : sessionStorage.getItem('access');
+export const getRefresh = () => isServer ? null : sessionStorage.getItem('refresh');
 
 // ── Axios instance ────────────────────────────────────────────────────
 export const api: AxiosInstance = axios.create({
@@ -23,7 +34,7 @@ export const api: AxiosInstance = axios.create({
 
 // ── Attach JWT token em toda requisição ───────────────────────────────
 api.interceptors.request.use((cfg: InternalAxiosRequestConfig) => {
-    const token = Cookies.get('access');
+    const token = getAccess();
     if (token) cfg.headers.Authorization = `Bearer ${token}`;
     return cfg;
 });
@@ -39,7 +50,7 @@ api.interceptors.response.use(
 
         if (err.response?.status === 401 && !orig._retry) {
             orig._retry = true;
-            const rt = Cookies.get('refresh');
+            const rt = getRefresh();
 
             if (!rt) {
                 clearTokens();
@@ -50,9 +61,7 @@ api.interceptors.response.use(
             if (refreshing) {
                 return new Promise((res) =>
                     queue.push((t) => {
-                        if (orig.headers) {
-                           orig.headers.Authorization = `Bearer ${t}`;
-                        }
+                        if (orig.headers) orig.headers.Authorization = `Bearer ${t}`;
                         res(api(orig));
                     })
                 );
@@ -60,14 +69,11 @@ api.interceptors.response.use(
 
             refreshing = true;
             try {
-                // Aqui sempre usa BASE dinâmico
                 const { data } = await axios.post(`${BASE}auth/token/refresh/`, { refresh: rt });
                 setTokens(data.access, rt);
                 queue.forEach((fn) => fn(data.access));
                 queue = [];
-                if (orig.headers) {
-                    orig.headers.Authorization = `Bearer ${data.access}`;
-                }
+                if (orig.headers) orig.headers.Authorization = `Bearer ${data.access}`;
                 return api(orig);
             } catch {
                 clearTokens();
@@ -81,14 +87,6 @@ api.interceptors.response.use(
         return Promise.reject(err);
     }
 );
-
-// ── Helpers de token ──────────────────────────────────────────────────
-export const setTokens = (a: string, r: string) => {
-    Cookies.set('access', a, { expires: 1 / 24, sameSite: 'strict' });
-    Cookies.set('refresh', r, { expires: 7, sameSite: 'strict' });
-};
-export const clearTokens = () => { Cookies.remove('access'); Cookies.remove('refresh'); };
-export const getAccess = () => Cookies.get('access');
 
 // ── Auth ──────────────────────────────────────────────────────────────
 export const authApi = {
@@ -160,7 +158,7 @@ export const followupsApi = {
 // ── Documents ─────────────────────────────────────────────────────────
 export const documentsApi = {
     list: async (eventId: string): Promise<EventDocument[]> =>
-        (await api.get('documents/', { params: { event: eventId } })).data.results,
+        (await api.get('documents/', { params: { event_id: eventId } })).data.results,
 
     requestUpload: async (p: {
         event_id: string;
@@ -178,8 +176,19 @@ export const documentsApi = {
         });
     },
 
-    downloadUrl: (id: string): string =>
-        `${BASE}documents/${id}/download/`,
+    register: async (p: {
+        event_id: string;
+        file_name: string;
+        minio_key: string;
+        content_type: string;
+        file_size: number;
+    }) => (await api.post('documents/register/', p)).data,
+
+    download: async (id: string): Promise<string> => {
+        const response = await api.get(`documents/${id}/download/`, { maxRedirects: 0, validateStatus: (s) => s < 400 });
+        // O backend retorna 302 com a URL do MinIO no header Location
+        return response.request?.responseURL || response.headers?.location || '';
+    },
 
     delete: async (id: string): Promise<void> => {
         await api.delete(`documents/${id}/`);
@@ -210,7 +219,7 @@ export const tvApi = {
     queue: async (): Promise<TVQueueState> =>
         (await api.get('tv/queue/')).data,
 
-    history: async (): Promise<Paginated<TVCallRecord>> =>
+    history: async (): Promise<any> =>
         (await api.get('tv/history/')).data,
 
     clearQueue: async (): Promise<void> => {
@@ -225,4 +234,18 @@ export const accountsApi = {
 
     updateMe: async (p: Partial<User>): Promise<User> =>
         (await api.patch('auth/me/', p)).data,
+
+    create: async (p: any): Promise<User> =>
+        (await api.post('auth/users/', p)).data,
+
+    update: async (id: string, p: any): Promise<User> =>
+        (await api.patch(`auth/users/${id}/`, p)).data,
+
+    deactivate: async (id: string): Promise<void> => {
+        await api.delete(`auth/users/${id}/`);
+    },
+
+    changePassword: async (p: { old_password: string; new_password: string; new_password_confirm: string }): Promise<void> => {
+        await api.post('auth/me/change-password/', p);
+    },
 };

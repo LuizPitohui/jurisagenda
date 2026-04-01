@@ -202,7 +202,7 @@ export function EventDetailModal() {
                     <span className="text-navy-700">
                       Código TV: <strong>{event.tv_code}</strong>
                       {' · '}
-                      {event.tv_priority === 'HIGH' ? '🔔 Alta prioridade' : '📢 Normal'}
+                      {event.tv_priority === 'HIGH' ? 'Alta prioridade' : 'Normal'}
                     </span>
                   </div>
                 )}

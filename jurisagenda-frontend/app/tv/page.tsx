@@ -5,7 +5,10 @@ import { Gavel, Users, Clock, FileText, Wifi, WifiOff } from 'lucide-react';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTV } from '@/store';
 import { EVENT_CONFIG } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { tvApi } from '@/lib/api';
 import type { WSMessage } from '@/types';
+import { speakGoogleTTS } from '@/lib/tts';
 
 const ICONS = {
   AUDIENCIA: Gavel,
@@ -35,13 +38,52 @@ function Clock24() {
 }
 
 export default function TVPage() {
-  const { active, history, speaking, setCall, confirm, setSpeaking } = useTV();
+  const { active, history, speaking, setCall, confirm, setSpeaking, setHistory } = useTV();
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+
+  // Tenta desbloquear autoplay automaticamente ao montar
+  useEffect(() => {
+    const unlock = async () => {
+      try {
+        // Cria um AudioContext silencioso para desbloquear o autoplay
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        await ctx.resume();
+        const buf = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start(0);
+        setAudioUnlocked(true);
+      } catch {
+        // Se falhar, aguarda interação do usuário
+      }
+    };
+    unlock();
+  }, []);
+
+  // Busca histórico do dia ao montar (só se autenticado)
+  const { data: historyData } = useQuery({
+    queryKey: ['tv-history'],
+    queryFn: tvApi.history,
+    refetchOnWindowFocus: false,
+    enabled: typeof window !== 'undefined' && !!sessionStorage.getItem('access'),
+  });
+
+  useEffect(() => {
+    if (historyData?.history?.length) {
+      setHistory(historyData.history.map((c: any) => ({
+        code: c.tv_code,
+        event_type: c.event_type,
+        priority: c.priority,
+        tts_text: '',
+        timestamp: c.called_at,
+        event_id: c.event?.id ?? '',
+      })));
+    }
+  }, [historyData]);
 
   const { connected } = useWebSocket('/ws/tv/', {
     onMessage: (msg: WSMessage) => {
-      if (msg.type === 'tv.init') {
-        // inicializa histórico com dados do servidor
-      }
       if (msg.type === 'tv.call') {
         setCall(msg.payload);
         speakTTS(msg.payload.tts_text);
@@ -53,21 +95,13 @@ export default function TVPage() {
   });
 
   const speakTTS = (text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'pt-BR';
-    utter.rate = 0.9;
-    utter.pitch = 1.0;
-    setSpeaking(true);
-    utter.onend = () => setSpeaking(false);
-    window.speechSynthesis.speak(utter);
+    speakGoogleTTS(text, () => setSpeaking(true), () => setSpeaking(false));
   };
 
   const activeCfg = active ? EVENT_CONFIG[active.event_type] : null;
   const ActiveIcon = active ? ICONS[active.event_type] : null;
 
   return (
-    // 🛠️ MUDANÇA: Fundo claro e elegante (#f8fafc slate-50)
     <div className="tv-screen select-none bg-slate-50 text-gray-900 overflow-hidden">
 
       {/* Efeitos visuais suaves para tela clara */}
@@ -166,7 +200,7 @@ export default function TVPage() {
                     className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-base font-bold uppercase tracking-wider"
                     style={{ background: '#fee2e2', color: '#b91c1c', border: '2px solid #fca5a5' }}
                   >
-                    🔔 Alta Prioridade
+                    Alta Prioridade
                   </motion.div>
                 )}
 

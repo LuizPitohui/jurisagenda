@@ -282,8 +282,9 @@ LOGGING = {
 }
 
 # ---------------------------------------------------------------------------
-# TV Panel
+# Google TTS
 # ---------------------------------------------------------------------------
+GOOGLE_TTS_API_KEY = env("GOOGLE_TTS_API_KEY", default="")
 TV_CODE_PREFIXES = {
     "AUDIENCIA": "A",
     "REUNIAO": "R",

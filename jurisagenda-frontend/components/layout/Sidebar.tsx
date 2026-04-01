@@ -1,18 +1,18 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Scale, Calendar, Users, FileText, Bell, Monitor, LogOut, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Scale, Calendar, FileText, Monitor, LogOut, ChevronRight, Settings, BarChart2 } from 'lucide-react';
 import { useAuth } from '@/store';
-import { authApi, clearTokens } from '@/lib/api';
-import Cookies from 'js-cookie';
+import { authApi, clearTokens, getRefresh } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const NAV = [
-  { href: '/dashboard',           icon: Calendar, label: 'Calendário' },
-  { href: '/dashboard/followups', icon: Bell,     label: 'Follow-ups' },
-  { href: '/dashboard/clients',   icon: Users,    label: 'Clientes'   },
-  { href: '/dashboard/documents', icon: FileText, label: 'Documentos' },
+  { href: '/dashboard',           icon: Calendar,  label: 'Calendário'    },
+  { href: '/dashboard/documents', icon: FileText,  label: 'Documentos'    },
+  { href: '/dashboard/reports',   icon: BarChart2, label: 'Relatórios'    },
+  { href: '/dashboard/settings',  icon: Settings,  label: 'Configurações' },
 ];
 
 export function Sidebar() {
@@ -28,7 +28,7 @@ export function Sidebar() {
     .toUpperCase() ?? '??';
 
   const logout = async () => {
-    const rt = Cookies.get('refresh');
+    const rt = getRefresh();
     if (rt) {
       try { await authApi.logout(rt); } catch {}
     }
@@ -41,14 +41,14 @@ export function Sidebar() {
   return (
     <aside
       className="h-full flex flex-col shrink-0 border-r"
-      style={{ width: 228, background: 'white', borderColor: '#e2d9c8' }}
+      style={{ width: 232, background: 'white', borderColor: '#e1e8f0' }}
     >
       {/* Logo */}
-      <div className="p-5 border-b" style={{ borderColor: '#e2d9c8' }}>
+      <div className="p-5 border-b" style={{ borderColor: '#e1e8f0' }}>
         <div className="flex items-center gap-3">
           <div
             className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: '#0e1e2e' }}
+            style={{ background: 'linear-gradient(135deg, #163352, #0b1929)' }}
           >
             <Scale size={17} className="text-white" />
           </div>
@@ -56,7 +56,7 @@ export function Sidebar() {
             <p className="font-serif font-bold text-navy-900 text-[15px] leading-tight">
               JurisAgenda
             </p>
-            <p className="text-[10px] uppercase tracking-widest" style={{ color: '#a89e90' }}>
+            <p className="text-[10px] uppercase tracking-widest" style={{ color: '#c9a84c' }}>
               Sistema Jurídico
             </p>
           </div>
@@ -72,22 +72,28 @@ export function Sidebar() {
           Principal
         </p>
 
-        {NAV.map(({ href, icon: Icon, label }) => {
+        {NAV.map(({ href, icon: Icon, label }, i) => {
           const active =
             href === '/dashboard'
               ? path === '/dashboard'
               : path.startsWith(href);
 
           return (
-            <Link
+            <motion.div
               key={href}
-              href={href}
-              className={cn('nav-link', active && 'active')}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.25, delay: i * 0.05 }}
             >
-              <Icon size={16} className="shrink-0" />
-              <span className="flex-1">{label}</span>
-              {active && <ChevronRight size={12} className="opacity-50" />}
-            </Link>
+              <Link
+                href={href}
+                className={cn('nav-link', active && 'active')}
+              >
+                <Icon size={16} className="shrink-0" />
+                <span className="flex-1">{label}</span>
+                {active && <ChevronRight size={12} className="opacity-50" />}
+              </Link>
+            </motion.div>
           );
         })}
 
