@@ -116,6 +116,7 @@ interface TVStore {
   setCall:     (c: TVCallPayload) => void;
   confirm:     (code: string) => void;
   setSpeaking: (v: boolean) => void;
+  setHistory:  (h: TVCallPayload[]) => void;
 }
 
 export const useTV = create<TVStore>((set, get) => ({
@@ -128,4 +129,5 @@ export const useTV = create<TVStore>((set, get) => ({
   }),
   confirm:     (code) => { if (get().active?.code === code) set({ active: null }); },
   setSpeaking: (v)    => set({ speaking: v }),
+  setHistory:  (h)    => set({ history: h.slice(0, 3) }),
 }));

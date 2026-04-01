@@ -40,16 +40,12 @@ class TVService:
 
     @staticmethod
     def _build_tts_text(tv_code: str) -> str:
-        """
-        Converte código TV para texto legível por TTS.
-        Ex: 'A-045' → 'Chamada A zero quarenta e cinco'
-        """
         parts = tv_code.split("-")
         if len(parts) == 2:
             prefix, number = parts
             number_words = TVService._number_to_words(int(number))
-            return f"Chamada {prefix} {number_words}"
-        return f"Chamada {tv_code}"
+            return f"{prefix} {number_words}"
+        return tv_code
 
     @staticmethod
     def _number_to_words(n: int) -> str:

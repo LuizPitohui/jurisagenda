@@ -1,16 +1,38 @@
 'use client';
+import { useEffect } from 'react';
 import { Monitor, Wifi, WifiOff, Radio, Clock, CheckCircle2, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useTV } from '@/store';
 import { fmtTime, EVENT_CONFIG } from '@/lib/utils';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { eventsApi } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { eventsApi, tvApi } from '@/lib/api';
 import { toast } from 'sonner';
 import type { WSMessage } from '@/types';
+import { speakGoogleTTS } from '@/lib/tts';
 
 export function TVQueuePanel() {
-  const { active, history, speaking, setCall, confirm, setSpeaking } = useTV();
+  const { active, history, speaking, setCall, confirm, setSpeaking, setHistory } = useTV();
+
+  // Busca histórico do dia ao montar
+  const { data: historyData } = useQuery({
+    queryKey: ['tv-history'],
+    queryFn: tvApi.history,
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    if (historyData?.history?.length) {
+      setHistory(historyData.history.map((c: any) => ({
+        code: c.tv_code,
+        event_type: c.event_type,
+        priority: c.priority,
+        tts_text: '',
+        timestamp: c.called_at,
+        event_id: c.event?.id ?? '',
+      })));
+    }
+  }, [historyData]);
 
   const qc = useQueryClient();
   const { connected } = useWebSocket('/ws/tv/', {
@@ -18,6 +40,7 @@ export function TVQueuePanel() {
       if (msg.type === 'tv.call') {
         setCall(msg.payload);
         speakTTS(msg.payload.tts_text);
+        qc.invalidateQueries({ queryKey: ['tv-history'] });
       }
       if (msg.type === 'tv.confirm') {
         confirm(msg.payload.code);
@@ -38,12 +61,7 @@ export function TVQueuePanel() {
   });
 
   const speakTTS = (text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    const utter  = new SpeechSynthesisUtterance(text);
-    utter.lang   = 'pt-BR';
-    setSpeaking(true);
-    utter.onend  = () => setSpeaking(false);
-    window.speechSynthesis.speak(utter);
+    speakGoogleTTS(text, () => setSpeaking(true), () => setSpeaking(false));
   };
 
   return (

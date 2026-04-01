@@ -62,10 +62,10 @@ const TYPE_LABELS = {
 };
 
 const TYPE_EMOJIS = {
-  AUDIENCIA: '⚖️',
-  REUNIAO: '👥',
-  PRAZO: '⏰',
-  CONTRATO: '📄',
+  AUDIENCIA: '⚖',
+  REUNIAO:   '◎',
+  PRAZO:     '◷',
+  CONTRATO:  '▤',
 };
 
 export function EventModal() {
@@ -451,7 +451,7 @@ export function EventModal() {
                             value={p}
                             className="sr-only"
                           />
-                          <span>{p === 'NORMAL' ? '📢' : '🔔'}</span>
+                          <span>{p === 'NORMAL' ? '○' : '●'}</span>
                           {p === 'NORMAL' ? 'Normal (Toca 1x)' : 'Alta (Insistente)'}
                         </label>
                       ))}

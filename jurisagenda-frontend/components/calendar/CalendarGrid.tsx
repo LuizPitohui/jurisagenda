@@ -1,8 +1,9 @@
 'use client';
-import { useMemo } from 'react';
-import { parseISO, isSameDay } from 'date-fns';
-import { Gavel, Users, Clock, FileText, AlertCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useMemo, useState } from 'react';
+import { parseISO, isSameDay, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Gavel, Users, Clock, FileText, AlertCircle, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { buildCalendarGrid, WEEKDAYS, fmtTime, cn } from '@/lib/utils';
 import { useEventModal, useEventDetail } from '@/store';
 import type { CalendarEvent } from '@/types';
@@ -24,6 +25,28 @@ interface Props {
 export function CalendarGrid({ month, year, events, isLoading }: Props) {
   const { show: openModal  } = useEventModal();
   const { show: openDetail } = useEventDetail();
+  const [morePopover, setMorePopover] = useState<{ date: Date; events: CalendarEvent[] } | null>(null);
+  const [popoverPos, setPopoverPos] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragOffset = useMemo(() => ({ x: 0, y: 0 }), []);
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setDragging(true);
+    dragOffset.x = e.clientX - popoverPos.x;
+    dragOffset.y = e.clientY - popoverPos.y;
+
+    const onMove = (ev: MouseEvent) => {
+      setPopoverPos({ x: ev.clientX - dragOffset.x, y: ev.clientY - dragOffset.y });
+    };
+    const onUp = () => {
+      setDragging(false);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
 
   const today = new Date();
   const cells = useMemo(() => buildCalendarGrid(year, month), [year, month]);
@@ -140,19 +163,85 @@ export function CalendarGrid({ month, year, events, isLoading }: Props) {
                 })}
 
                 {hasMore && (
-                  <span
-                    className="text-[10px] px-1 cursor-pointer"
+                  <button
+                    className="text-[10px] px-1 cursor-pointer hover:underline text-left"
                     style={{ color: '#a89e90' }}
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPopoverPos({
+                        x: window.innerWidth / 2 - 144,
+                        y: window.innerHeight / 2 - 150,
+                      });
+                      setMorePopover({ date: cell.date, events: dayEvents });
+                    }}
                   >
                     +{dayEvents.length - 3} mais
-                  </span>
+                  </button>
                 )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Popover de todos os eventos do dia */}
+      <AnimatePresence>
+        {morePopover && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setMorePopover(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed z-50 bg-white rounded-2xl shadow-xl border p-4 w-72"
+              style={{
+                borderColor: '#e2d9c8',
+                left: popoverPos.x,
+                top: popoverPos.y,
+                cursor: dragging ? 'grabbing' : 'grab',
+                userSelect: 'none',
+              }}
+            >
+              <div
+                className="flex items-center justify-between mb-3"
+                onMouseDown={handleDragStart}
+              >
+                <p className="text-sm font-semibold text-navy-800">
+                  {format(morePopover.date, "d 'de' MMMM", { locale: ptBR })}
+                </p>
+                <button
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={() => setMorePopover(null)}
+                  className="p-1 rounded-lg hover:bg-cream-100"
+                  style={{ color: '#a89e90' }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="space-y-1" onMouseDown={(e) => e.stopPropagation()}>
+                {morePopover.events.map((ev) => {
+                  const Icon = ICONS[ev.event_type];
+                  return (
+                    <button
+                      key={ev.id}
+                      onClick={() => { openDetail(ev); setMorePopover(null); }}
+                      className={cn('chip w-full text-left', `chip-${ev.event_type}`)}
+                    >
+                      <Icon size={9} className="shrink-0" />
+                      <span className="truncate flex-1">
+                        {fmtTime(ev.start_datetime)} {ev.title}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
