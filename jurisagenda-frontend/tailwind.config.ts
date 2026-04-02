@@ -1,10 +1,17 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
     "./app/**/*.{ts,tsx}",
+  ],
+  safelist: [
+    'dark:bg-[#1a2840]',
+    'dark:bg-[#162030]',
+    'dark:bg-[#0f1923]',
+    'dark:border-[#243550]',
   ],
   theme: {
     extend: {

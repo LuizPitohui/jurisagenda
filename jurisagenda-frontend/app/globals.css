@@ -264,3 +264,156 @@
 .wave-bars span:nth-child(3) { animation-delay: 0.30s; height: 100%; }
 .wave-bars span:nth-child(4) { animation-delay: 0.45s; height: 65%; }
 .wave-bars span:nth-child(5) { animation-delay: 0.60s; height: 35%; }
+
+/* ── Dark mode ───────────────────────────────────────────────────────── */
+.dark {
+  --c-bg:          #0f1923;
+  --c-surface:     #162030;
+  --c-surface-2:   #1a2840;
+  --c-border:      #243550;
+  --c-border-soft: #1e2e45;
+  --c-navy:        #e2eaf4;
+  --c-navy-mid:    #4a7fa8;
+  --c-navy-light:  #6a9fc8;
+  --shadow-card:   0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md:     0 4px 16px rgba(0,0,0,0.4);
+  --shadow-modal:  0 24px 64px rgba(0,0,0,0.6);
+  --type-btn-bg:   #1a2840;
+}
+
+/* Cards */
+.dark .card, .dark .card-lifted {
+  background: #162030 !important;
+  border-color: #243550 !important;
+}
+
+/* Botão primário — corrige gradiente claro */
+.dark .btn-primary {
+  background: linear-gradient(135deg, #1e4a73, #0f2d4a) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;
+  color: #e2eaf4 !important;
+}
+.dark .btn-primary:not(:disabled):hover {
+  background: linear-gradient(135deg, #2a5a84, #1e4a73) !important;
+}
+.dark .btn-secondary {
+  background: #1a2840 !important;
+  border-color: #243550 !important;
+  color: #b8d0e8 !important;
+  box-shadow: none !important;
+}
+.dark .btn-ghost { color: #7a9ab8 !important; }
+.dark .btn-ghost:hover { background: #1a2840 !important; }
+
+/* Formulários */
+.dark .field-input {
+  background: #1a2840 !important;
+  border-color: #243550 !important;
+  color: #e2eaf4 !important;
+}
+.dark .field-input:focus {
+  border-color: #4a7fa8 !important;
+  box-shadow: 0 0 0 3px rgba(74,127,168,0.15) !important;
+  background: #1e2e45 !important;
+}
+.dark .field-input::placeholder { color: #3a5a78 !important; }
+.dark .field-label { color: #7a9ab8 !important; }
+
+/* Sidebar */
+.dark aside { background: #162030 !important; border-color: #243550 !important; }
+.dark .nav-link { color: #7a9ab8 !important; }
+.dark .nav-link:hover { background: #1a2840 !important; color: #e2eaf4 !important; }
+.dark .nav-link.active {
+  background: linear-gradient(135deg, #1e4a73, #0f2d4a) !important;
+  color: #e2eaf4 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+}
+
+/* Header */
+.dark header { background: #162030 !important; border-color: #243550 !important; }
+.dark header h1 { color: #e2eaf4 !important; }
+
+/* Calendário */
+.dark .cal-cell { border-color: #1e2e45 !important; }
+.dark .cal-cell-curr { background: #162030 !important; }
+.dark .cal-cell-curr:hover { background: #1a2840 !important; }
+.dark .cal-cell-other { background: #0f1923 !important; opacity: 0.7; }
+.dark .cal-cell-today { background: #1a2840 !important; }
+
+/* Chips */
+.dark .chip-AUDIENCIA { background: rgba(229,62,62,0.12) !important; color: #f87171 !important; border-color: rgba(229,62,62,0.3) !important; }
+.dark .chip-REUNIAO   { background: rgba(49,130,206,0.12) !important; color: #60a5fa !important; border-color: rgba(49,130,206,0.3) !important; }
+.dark .chip-PRAZO     { background: rgba(214,158,46,0.12) !important; color: #fbbf24 !important; border-color: rgba(214,158,46,0.3) !important; }
+.dark .chip-CONTRATO  { background: rgba(56,161,105,0.12) !important; color: #4ade80 !important; border-color: rgba(56,161,105,0.3) !important; }
+
+/* Skeleton */
+.dark .skel {
+  background: linear-gradient(90deg, #1a2840 25%, #243550 50%, #1a2840 75%) !important;
+  background-size: 200% 100% !important;
+}
+
+/* Scrollbar */
+.dark ::-webkit-scrollbar-thumb { background: #243550; }
+
+/* Todos os fundos claros */
+.dark [style*="background: white"],
+.dark [style*="background: #fff"],
+.dark [style*="background: #faf8f3"],
+.dark [style*="background: #fafaf8"],
+.dark [style*="background: #f8fafc"],
+.dark [style*="background: #f8f6f1"],
+.dark [style*="background: #fdfcf8"] { background: #162030 !important; }
+
+.dark [style*="background: #f4f6f9"],
+.dark [style*="background: #f0f5fb"],
+.dark [style*="background: #f0f4f9"],
+.dark [style*="background: #eef4fb"],
+.dark [style*="background: #f3ecdb"],
+.dark [style*="background: #f0e6c8"] { background: #1a2840 !important; }
+
+/* Todas as bordas claras */
+.dark [style*="borderColor: #e2d9c8"],
+.dark [style*="borderColor: #e1e8f0"],
+.dark [style*="borderColor: #f0ebe3"],
+.dark [style*="border-color: #e2d9c8"],
+.dark [style*="border-color: #e1e8f0"] { border-color: #243550 !important; }
+
+/* Textos escuros → claro */
+.dark [style*="color: #0e1e2e"],
+.dark [style*="color: #1e3f5c"],
+.dark [style*="color: #163352"],
+.dark [style*="color: #0b1929"],
+.dark [style*="color: #1f2937"],
+.dark [style*="color: #111827"] { color: #e2eaf4 !important; }
+
+/* Textos cinza → azul escuro */
+.dark [style*="color: #a89e90"],
+.dark [style*="color: #8a7e70"],
+.dark [style*="color: #6b5e4e"],
+.dark [style*="color: #c8bfb2"],
+.dark [style*="color: #9ab0c8"],
+.dark [style*="color: #6b8099"],
+.dark [style*="color: #5a7090"],
+.dark [style*="color: #9aafc4"] { color: #4a6a88 !important; }
+
+/* Classes Tailwind */
+.dark .bg-white { background: #162030 !important; }
+.dark .bg-slate-50, .dark .bg-slate-100 { background: #1a2840 !important; }
+.dark .text-navy-900 { color: #e2eaf4 !important; }
+.dark .text-navy-800 { color: #c8dff0 !important; }
+.dark .text-navy-700 { color: #a8c8e0 !important; }
+.dark .border-gray-100, .dark .border-gray-200 { border-color: #243550 !important; }
+.dark .dark\:bg-navy-900 { background: #162030 !important; }
+.dark .dark\:bg-navy-800 { background: #1a2840 !important; }
+.dark .dark\:bg-navy-700 { background: #1e4a73 !important; }
+
+/* Modal de evento — botões de tipo e seções com fundo claro */
+.dark label[style*="background: var(--type-btn-bg"] { background: #1a2840 !important; }
+.dark .rounded-xl.bg-\[#faf8f3\] { background: #1a2840 !important; }
+
+/* Rodapé da sidebar — força fundo escuro */
+.dark aside > div:last-child > div { background: #1a2840 !important; }
+
+/* ── TV effects ──────────────────────────────────────────────────────── */
+
+.dark body { background: #0f1923; color: #e2eaf4; }

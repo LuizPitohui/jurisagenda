@@ -1,15 +1,15 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, Tv, AlertTriangle } from 'lucide-react';
+import { X, Loader2, Tv, AlertTriangle, Search } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useEventModal, useAuth } from '@/store';
-import { eventsApi, accountsApi } from '@/lib/api';
+import { eventsApi, accountsApi, eventsApi as eApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 const schema = z.object({
@@ -68,14 +68,70 @@ const TYPE_EMOJIS = {
   CONTRATO:  '▤',
 };
 
-export function EventModal() {
-  const { open, hide, editId, preDate } = useEventModal();
+function ProcessNumberInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [query, setQuery]   = useState(value);
+  const [open,  setOpen]    = useState(false);
+  const ref                 = useRef<HTMLDivElement>(null);
+
+  const { data } = useQuery({
+    queryKey: ['process-search', query],
+    queryFn:  () => eventsApi.list({ search: query, page_size: 6 }),
+    enabled:  query.length >= 4,
+    staleTime: 10_000,
+  });
+
+  // Extrai números de processo únicos dos eventos encontrados
+  const suggestions = [...new Set(
+    (data?.results ?? [])
+      .map((e: any) => e.process_number)
+      .filter((p: string) => p && p.toLowerCase().includes(query.toLowerCase()))
+  )].slice(0, 5) as string[];
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="relative">
+        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#a89e90' }} />
+        <input
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true); }}
+          onFocus={() => query.length >= 4 && setOpen(true)}
+          className="field-input pl-8"
+          placeholder="0000.00.00.000000-0"
+        />
+      </div>
+      {open && suggestions.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-[#162030] rounded-xl border border-[#e2d9c8] dark:border-[#243550] shadow-lg overflow-hidden">
+          {suggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => { onChange(s); setQuery(s); setOpen(false); }}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-[#f0f4f9] dark:hover:bg-[#1a2840] text-navy-800 dark:text-[#e2eaf4] font-mono"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function EventModal() {  const { open, hide, editId, preDate } = useEventModal();
   const qc = useQueryClient();
   const { user } = useAuth();
 
   const { data: users } = useQuery({
     queryKey: ['users'],
-    queryFn: () => accountsApi.list(),
+    queryFn: () => accountsApi.listSelect(),
     enabled: open,
   });
 
@@ -151,7 +207,6 @@ export function EventModal() {
   });
 
   const onSubmit = (data: Form) => {
-    // 🛠️ Sanitização: Convertendo valores vazios ("") para null.
     const isAudienciaOrReuniao = data.event_type === 'AUDIENCIA' || data.event_type === 'REUNIAO';
     const isContrato = data.event_type === 'CONTRATO';
     const isPrazo = data.event_type === 'PRAZO';
@@ -165,7 +220,29 @@ export function EventModal() {
       video_link: data.video_link || "",
     };
 
-    mutation.mutate(payload);
+    const recurrence = (data as any).recurrence;
+
+    if (!editId && recurrence) {
+      // Cria 4 ocorrências
+      const promises = Array.from({ length: 4 }, (_, i) => {
+        const start = new Date(payload.start_datetime);
+        const end   = payload.end_datetime ? new Date(payload.end_datetime) : null;
+        const days  = recurrence === 'weekly' ? 7 : recurrence === 'biweekly' ? 14 : 30;
+        start.setDate(start.getDate() + days * (i + 1));
+        if (end) end.setDate(end.getDate() + days * (i + 1));
+        return eventsApi.create({
+          ...payload,
+          start_datetime: start.toISOString().slice(0, 16),
+          end_datetime:   end ? end.toISOString().slice(0, 16) : null,
+        });
+      });
+      mutation.mutate(payload);
+      Promise.all(promises).then(() => {
+        qc.invalidateQueries({ queryKey: ['calendar'] });
+      });
+    } else {
+      mutation.mutate(payload);
+    }
   };
 
   // 🛠️ VARIÁVEL SHOW RESTAURADA: Ela controla o que aparece na tela
@@ -199,7 +276,7 @@ export function EventModal() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 12 }}
           transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-          className="relative bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto z-10"
+          className="relative bg-white dark:bg-[#162030] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto z-10"
           style={{ boxShadow: 'var(--shadow-modal)' }}
         >
           {/* Barra colorida por tipo */}
@@ -210,14 +287,13 @@ export function EventModal() {
 
           {/* Cabeçalho */}
           <div
-            className="flex items-center justify-between px-6 py-5 border-b"
-            style={{ borderColor: '#e2d9c8' }}
+            className="flex items-center justify-between px-6 py-5 border-b border-[#e2d9c8] dark:border-navy-700"
           >
             <div>
-              <h3 className="font-serif text-xl font-bold text-navy-900">
+              <h3 className="font-serif text-xl font-bold text-navy-900 dark:text-[#e2eaf4]">
                 {editId ? 'Editar Evento' : 'Novo Evento'}
               </h3>
-              <p className="text-xs mt-0.5" style={{ color: '#a89e90' }}>
+              <p className="text-xs mt-0.5 text-[#a89e90] dark:text-[#4a6a88]">
                 Preencha os campos conforme o tipo de evento
               </p>
             </div>
@@ -241,11 +317,14 @@ export function EventModal() {
                     className={cn(
                       'flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border-2',
                       'cursor-pointer transition-all text-xs font-semibold',
+                      eventType === t
+                        ? ''
+                        : 'bg-[#f8fafc] dark:bg-[#1a2840] text-[#a89e90] dark:text-[#4a6a88] border-transparent'
                     )}
                     style={
                       eventType === t
                         ? { background: TYPE_COLORS[t] + '15', color: TYPE_COLORS[t], borderColor: TYPE_COLORS[t] + '66' }
-                        : { background: '#faf8f3', color: '#a89e90', borderColor: 'transparent' }
+                        : undefined
                     }
                   >
                     <input
@@ -376,30 +455,25 @@ export function EventModal() {
 
               <div>
                 <label className="field-label">Nº Processo (opcional)</label>
-                <input
-                  {...register('process_number')}
-                  className="field-input"
-                  placeholder="0000.00.00.000000-0"
+                <ProcessNumberInput
+                  value={watch('process_number') ?? ''}
+                  onChange={(v) => setValue('process_number', v)}
                 />
               </div>
             </div>
 
             {/* Toggle TV */}
-            <div
-              className="rounded-xl p-4 border"
-              style={{ borderColor: '#e2d9c8', background: '#faf8f3' }}
-            >
+            <div className="rounded-xl p-4 border border-[#e2d9c8] dark:border-[#243550] bg-[#faf8f3] dark:bg-[#1a2840]">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Tv size={16} style={{ color: tvEnabled ? '#1e3f5c' : '#c8bfb2' }} />
+                <div className="flex items-center gap-2">
+                  <Tv size={16} className="text-[#4a7fa8]" />
                   <div>
-                    <p className="text-sm font-semibold text-navy-800">Ativar Painel TV</p>
-                    <p className="text-xs" style={{ color: '#a89e90' }}>
+                    <p className="text-sm font-semibold text-navy-900 dark:text-[#e2eaf4]">Ativar Painel TV</p>
+                    <p className="text-xs text-[#a89e90] dark:text-[#4a6a88]">
                       Chama o cliente na recepção
                     </p>
                   </div>
                 </div>
-
                 <Controller
                   control={control}
                   name="tv_enabled"
@@ -410,7 +484,7 @@ export function EventModal() {
                       aria-checked={field.value}
                       onClick={() => field.onChange(!field.value)}
                       className="toggle"
-                      style={{ background: field.value ? '#0e1e2e' : '#e2d9c8' }}
+                      style={{ background: field.value ? '#1e4a73' : '#243550' }}
                     >
                       <span
                         className="toggle-thumb"
@@ -426,8 +500,7 @@ export function EventModal() {
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
-                  className="mt-4 pt-4 border-t space-y-4"
-                  style={{ borderColor: '#e2d9c8' }}
+                  className="mt-4 pt-4 border-t border-[#e2d9c8] dark:border-[#243550] space-y-4"
                 >
                   <div>
                     <label className="field-label mb-2">Prioridade da Chamada</label>
@@ -438,12 +511,10 @@ export function EventModal() {
                           className={cn(
                             'flex items-center gap-2 p-3 rounded-xl border-2',
                             'cursor-pointer transition-all text-sm font-medium',
-                          )}
-                          style={
                             tvPriority === p
-                              ? { borderColor: '#0e1e2e', background: '#f0f4f9', color: '#0e1e2e' }
-                              : { borderColor: '#e2d9c8', color: '#a89e90' }
-                          }
+                              ? 'border-[#1e4a73] dark:border-[#4a7fa8] bg-[#f0f4f9] dark:bg-[#1e2e45] text-[#0e1e2e] dark:text-[#e2eaf4]'
+                              : 'border-[#e2d9c8] dark:border-[#243550] text-[#a89e90] dark:text-[#4a6a88]'
+                          )}
                         >
                           <input
                             type="radio"
@@ -458,7 +529,7 @@ export function EventModal() {
                     </div>
                   </div>
 
-                  {/* 🛠️ NOVO CAMPO: Antecedência Dinâmica */}
+                  {/* Antecedência Dinâmica */}
                   <div>
                     <label className="field-label">Lembrar com antecedência de:</label>
                     <div className="flex gap-3 items-center">
@@ -478,14 +549,13 @@ export function EventModal() {
                         <option value="DAYS">Dias</option>
                       </select>
                     </div>
-                    {/* Mensagem de ajuda dinâmica */}
                     {watch('tv_advance_value') == 0 && (
-                      <p className="text-xs text-amber-600 mt-1">A chamada será feita no exato horário do evento.</p>
+                      <p className="text-xs text-amber-500 dark:text-amber-400 mt-1">A chamada será feita no exato horário do evento.</p>
                     )}
                   </div>
 
                   {tvPriority === 'HIGH' && (
-                    <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 text-amber-800 text-xs">
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 text-xs">
                       <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                       A chamada repetirá a cada 30 segundos até que alguém confirme a ciência no painel.
                     </div>
@@ -493,6 +563,22 @@ export function EventModal() {
                 </motion.div>
               )}
             </div>
+
+            {/* Recorrência */}
+            {!editId && (
+              <div className="rounded-xl p-4 border border-[#e2d9c8] dark:border-[#243550] bg-[#faf8f3] dark:bg-[#1a2840]">
+                <label className="field-label mb-2">Repetir evento</label>
+                <select {...register('recurrence' as any)} className="field-input">
+                  <option value="">Não repetir</option>
+                  <option value="weekly">Semanalmente</option>
+                  <option value="biweekly">A cada 2 semanas</option>
+                  <option value="monthly">Mensalmente</option>
+                </select>
+                <p className="text-xs mt-2" style={{ color: '#a89e90' }}>
+                  Cria cópias do evento nas próximas 4 ocorrências automaticamente.
+                </p>
+              </div>
+            )}
 
             {/* Observações */}
             <div>

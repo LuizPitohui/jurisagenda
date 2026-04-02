@@ -291,5 +291,10 @@ TV_CODE_PREFIXES = {
     "PRAZO": "P",
     "CONTRATO": "C",
 }
-TV_HIGH_PRIORITY_RESEND_INTERVAL = 30  # segundos
-TV_FOLLOWUP_CHECK_DELAY_MINUTES = 5    # minutos após horário do evento
+TV_HIGH_PRIORITY_RESEND_INTERVAL = 30
+TV_FOLLOWUP_CHECK_DELAY_MINUTES = 5
+
+# ---------------------------------------------------------------------------
+# App URL (usado em e-mails)
+# ---------------------------------------------------------------------------
+APP_URL = env("APP_URL", default="http://localhost")

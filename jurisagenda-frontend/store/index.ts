@@ -4,24 +4,54 @@ import type { User, CalendarEvent, FollowUpNeededPayload, TVCallPayload } from '
 
 // ── Auth ──────────────────────────────────────────────────────────────
 interface AuthStore {
-  user:    User | null;
-  isAuth:  boolean;
-  setUser: (u: User) => void;
-  clear:   () => void;
+  user:       User | null;
+  isAuth:     boolean;
+  avatarUrl:  string | null;
+  setUser:    (u: User) => void;
+  setAvatar:  (url: string | null) => void;
+  clear:      () => void;
 }
 
 export const useAuth = create<AuthStore>()(
   persist(
     (set) => ({
-      user:    null,
-      isAuth:  false,
-      setUser: (u) => set({ user: u, isAuth: true }),
-      clear:   ()  => set({ user: null, isAuth: false }),
+      user:      null,
+      isAuth:    false,
+      avatarUrl: null,
+      setUser:   (u) => set({ user: u, isAuth: true }),
+      setAvatar: (url) => set({ avatarUrl: url }),
+      clear:     ()  => set({ user: null, isAuth: false, avatarUrl: null }),
     }),
     {
       name: 'juris-auth',
-      partialize: (s) => ({ user: s.user, isAuth: s.isAuth }),
+      partialize: (s) => ({ user: s.user, isAuth: s.isAuth, avatarUrl: s.avatarUrl }),
+      // Limpa avatarUrl se apontar para hostname interno do Docker
+      merge: (persisted: any, current) => {
+        const url = persisted?.avatarUrl ?? null;
+        const isInternal = url && (url.includes('minio:9000') || url.includes('minio:'));
+        return { ...current, ...persisted, avatarUrl: isInternal ? null : url };
+      },
     }
+  )
+);
+
+// ── Tema ──────────────────────────────────────────────────────────────
+interface ThemeStore {
+  dark: boolean;
+  toggle: () => void;
+}
+
+export const useTheme = create<ThemeStore>()(
+  persist(
+    (set, get) => ({
+      dark: false,
+      toggle: () => {
+        const next = !get().dark;
+        set({ dark: next });
+        document.documentElement.classList.toggle('dark', next);
+      },
+    }),
+    { name: 'juris-theme' }
   )
 );
 
@@ -85,27 +115,31 @@ export const useFollowUpModal = create<FollowUpModalStore>((set, get) => ({
 
 // ── Filtros do calendário ─────────────────────────────────────────────
 interface CalendarStore {
-  month:        number;
-  year:         number;
-  filters:      Set<string>;
-  setMonth:     (m: number, y: number) => void;
-  toggleFilter: (t: string) => void;
-  hasFilter:    (t: string) => boolean;
+  month:          number;
+  year:           number;
+  filters:        Set<string>;
+  assignedFilter: string | null;
+  setMonth:       (m: number, y: number) => void;
+  toggleFilter:   (t: string) => void;
+  hasFilter:      (t: string) => boolean;
+  setAssigned:    (id: string | null) => void;
 }
 
 const now = new Date();
 
 export const useCalendar = create<CalendarStore>((set, get) => ({
-  month:   now.getMonth() + 1,
-  year:    now.getFullYear(),
-  filters: new Set(['AUDIENCIA', 'REUNIAO', 'PRAZO', 'CONTRATO']),
+  month:          now.getMonth() + 1,
+  year:           now.getFullYear(),
+  filters:        new Set(['AUDIENCIA', 'REUNIAO', 'PRAZO', 'CONTRATO']),
+  assignedFilter: null,
   setMonth: (m, y) => set({ month: m, year: y }),
   toggleFilter: (t) => {
     const f = new Set(get().filters);
     if (f.has(t)) f.delete(t); else f.add(t);
     set({ filters: f });
   },
-  hasFilter: (t) => get().filters.has(t),
+  hasFilter:   (t) => get().filters.has(t),
+  setAssigned: (id) => set({ assignedFilter: id }),
 }));
 
 // ── Estado do painel TV ───────────────────────────────────────────────

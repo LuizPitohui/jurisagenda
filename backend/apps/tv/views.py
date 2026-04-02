@@ -9,6 +9,8 @@ import json
 import requests
 from django.conf import settings
 from django.http import HttpResponse
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,6 +20,8 @@ from core.permissions import IsAdmin, IsAdminOrLawyerOrSecretary
 from .models import TVCallLog, TVCallStatus
 from .serializers import TVCallLogSerializer
 from .services import TVService
+
+_TTS_MAX_CHARS = 300
 
 
 class TVQueueView(APIView):
@@ -56,14 +60,22 @@ class TVTTSView(APIView):
     GET /api/v1/tv/tts/?text=Chamada+A+zero+um
     Retorna áudio MP3 gerado pelo Google Cloud TTS.
     Endpoint público — painel TV não requer autenticação.
+    Rate limit: 30 req/min por IP para proteger a cota do Google TTS.
     """
     permission_classes = []
     authentication_classes = []
 
+    @method_decorator(ratelimit(key='ip', rate='30/m', method='GET', block=True))
     def get(self, request):
-        text = request.query_params.get("text", "")
+        text = request.query_params.get("text", "").strip()
         if not text:
             return Response({"error": "text é obrigatório"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if len(text) > _TTS_MAX_CHARS:
+            return Response(
+                {"error": f"text não pode exceder {_TTS_MAX_CHARS} caracteres"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         api_key = getattr(settings, "GOOGLE_TTS_API_KEY", "")
         if not api_key:

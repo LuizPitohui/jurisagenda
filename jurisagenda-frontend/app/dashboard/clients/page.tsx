@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { clientsApi } from '@/lib/api';
 import { fmtDate, cn } from '@/lib/utils';
+import { Pagination } from '@/components/ui/Pagination';
 import type { Client } from '@/types';
 
 const schema = z.object({
@@ -117,15 +118,17 @@ function ClientCard({ client, onAnonymize }: { client: Client; onAnonymize: (id:
 
 export default function ClientsPage() {
   const [search,    setSearch]    = useState('');
+  const [page,      setPage]      = useState(1);
   const [showForm,  setShowForm]  = useState(false);
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['clients', search],
-    queryFn:  () => clientsApi.list(search || undefined),
+    queryKey: ['clients', search, page],
+    queryFn:  () => clientsApi.list(search || undefined, page),
   });
 
-  const clients = data?.results ?? [];
+  const clients    = data?.results ?? [];
+  const totalPages = data?.pagination?.total_pages ?? 1;
 
   const {
     register,
@@ -153,6 +156,9 @@ export default function ClientsPage() {
     },
     onError: () => toast.error('Erro ao anonimizar cliente.'),
   });
+
+  // Reseta para página 1 ao buscar
+  const handleSearch = (v: string) => { setSearch(v); setPage(1); };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -302,7 +308,7 @@ export default function ClientsPage() {
         />
         <input
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearch(e.target.value)}
           placeholder="Buscar por nome, CPF ou e-mail…"
           className="field-input pl-9"
         />
@@ -350,6 +356,7 @@ export default function ClientsPage() {
               onAnonymize={(id) => anonymizeMutation.mutate(id)}
             />
           ))}
+          <Pagination currentPage={page} totalPages={totalPages} onPage={setPage} />
         </div>
       )}
 

@@ -19,6 +19,13 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
 
+class UserSelectSerializer(serializers.ModelSerializer):
+    """Serializer mínimo para selects — não expõe dados sensíveis."""
+    class Meta:
+        model = User
+        fields = ["id", "full_name", "role"]
+
+
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)

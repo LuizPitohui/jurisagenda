@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 import { authApi } from '@/lib/api';
 import { useAuth } from '@/store';
 import { cn } from '@/lib/utils';
@@ -137,6 +138,11 @@ export default function LoginPage() {
                   </button>
                 </div>
                 {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password.message}</p>}
+                <div className="flex justify-end mt-1">
+                  <Link href="/forgot-password" className="text-xs" style={{ color: '#64748b' }}>
+                    Esqueceu a senha?
+                  </Link>
+                </div>
               </div>
 
               {/* Botão */}

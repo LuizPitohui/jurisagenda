@@ -1,12 +1,13 @@
 'use client';
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
-import { FileText, Upload, Trash2, Download, Search, Loader2, Filter, X, Calendar, FileImage, FileType2, File } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FileText, Upload, Trash2, Download, Search, Loader2, X, Calendar, FileImage, FileType2, File, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { documentsApi, eventsApi } from '@/lib/api';
 import { fmtDateTime, fmtFileSize, fmtDate, EVENT_CONFIG, cn } from '@/lib/utils';
-import type { Event } from '@/types';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import type { Event, EventDocument } from '@/types';
 
 const ACCEPTED_TYPES = [
   'application/pdf',
@@ -25,6 +26,8 @@ export default function DocumentsPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [dragging, setDragging]           = useState(false);
   const [page, setPage]                   = useState(1);
+  const [preview, setPreview]             = useState<{ url: string; doc: EventDocument } | null>(null);
+  const [deleteTarget, setDeleteTarget]   = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
 
@@ -83,10 +86,12 @@ export default function DocumentsPage() {
   };
 
   const events     = eventsData?.results ?? [];
-  const totalPages = Math.ceil((eventsData?.count ?? 0) / PAGE_SIZE);
+  const totalPages = eventsData?.pagination?.total_pages ?? 1;
+  const totalCount = eventsData?.pagination?.count ?? 0;
   const cfg        = selectedEvent ? EVENT_CONFIG[selectedEvent.event_type] : null;
 
   return (
+    <>
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
@@ -95,14 +100,14 @@ export default function DocumentsPage() {
     >
 
       {/* ── Painel esquerdo: lista de eventos ── */}
-      <div className="w-80 shrink-0 flex flex-col border-r" style={{ borderColor: '#e2d9c8' }}>
+      <div className="w-80 shrink-0 flex flex-col border-r border-[#e2d9c8] dark:border-navy-800">
 
         {/* Header + filtros */}
-        <div className="p-4 border-b space-y-3" style={{ borderColor: '#e2d9c8', background: '#faf8f3' }}>
+        <div className="p-4 border-b space-y-3 border-[#e2d9c8] dark:border-navy-800 bg-[#faf8f3] dark:bg-[#162030]">
           <div>
             <h2 className="font-serif text-lg font-bold text-navy-900">Documentos</h2>
             <p className="text-xs mt-0.5" style={{ color: '#a89e90' }}>
-              {eventsData?.count ?? 0} eventos encontrados
+              {totalCount} eventos encontrados
             </p>
           </div>
 
@@ -165,7 +170,7 @@ export default function DocumentsPage() {
               <p className="text-xs" style={{ color: '#c8bfb2' }}>Nenhum evento encontrado</p>
             </div>
           ) : (
-            <div className="divide-y" style={{ borderColor: '#f0ebe3' }}>
+            <div className="divide-y dark:divide-navy-800" style={{ borderColor: '#f0ebe3' }}>
               {events.map((event) => {
                 const c      = EVENT_CONFIG[event.event_type];
                 const active = selectedEvent?.id === event.id;
@@ -223,15 +228,15 @@ export default function DocumentsPage() {
       {/* ── Painel direito: documentos ── */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {!selectedEvent ? (
-          <div className="flex-1 flex flex-col items-center justify-center" style={{ background: '#faf8f3' }}>
+          <div className="flex-1 flex flex-col items-center justify-center bg-[#faf8f3] dark:bg-[#0f1923]">
             <FileText size={56} className="opacity-10 mb-4" style={{ color: '#0e1e2e' }} />
-            <p className="font-serif text-xl font-semibold text-navy-800 mb-1">Selecione um evento</p>
-            <p className="text-sm" style={{ color: '#a89e90' }}>Escolha um evento à esquerda para gerenciar documentos</p>
+            <p className="font-serif text-xl font-semibold text-navy-800 dark:text-blue-200 mb-1">Selecione um evento</p>
+            <p className="text-sm dark:text-blue-400" style={{ color: '#a89e90' }}>Escolha um evento à esquerda para gerenciar documentos</p>
           </div>
         ) : (
           <>
             {/* Header do evento selecionado */}
-            <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: '#e2d9c8', background: '#faf8f3' }}>
+            <div className="px-6 py-4 border-b flex items-center justify-between border-[#e2d9c8] dark:border-navy-800 bg-[#faf8f3] dark:bg-[#162030]">
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-[11px] font-bold uppercase" style={{ color: cfg!.color }}>{cfg!.label}</span>
@@ -303,6 +308,22 @@ export default function DocumentsPage() {
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={async () => {
+                            try {
+                              const url = await documentsApi.download(doc.id);
+                              const canPreview = doc.content_type === 'application/pdf' || doc.content_type.startsWith('image/');
+                              if (canPreview) {
+                                setPreview({ url, doc });
+                              } else {
+                                window.open(url, '_blank');
+                              }
+                            } catch { toast.error('Erro ao abrir documento.'); }
+                          }}
+                          className="btn-ghost btn-sm p-2 text-navy-600" title="Visualizar"
+                        >
+                          <Eye size={14} />
+                        </button>
+                        <button
+                          onClick={async () => {
                             try { window.open(await documentsApi.download(doc.id), '_blank'); }
                             catch { toast.error('Erro ao baixar.'); }
                           }}
@@ -311,7 +332,7 @@ export default function DocumentsPage() {
                           <Download size={14} />
                         </button>
                         <button
-                          onClick={() => { if (confirm('Remover este documento?')) deleteMutation.mutate(doc.id); }}
+                          onClick={() => setDeleteTarget(doc.id)}
                           className="btn-ghost btn-sm p-2 text-red-400 hover:bg-red-50" title="Remover"
                         >
                           <Trash2 size={14} />
@@ -326,5 +347,71 @@ export default function DocumentsPage() {
         )}
       </div>
     </motion.div>
+
+      {/* Modal de preview */}
+      <AnimatePresence>        {preview && (          <>
+            <div className="fixed inset-0 z-50 bg-navy-950/60 backdrop-blur-sm" onClick={() => setPreview(null)} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              className="fixed inset-4 z-50 flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden"
+              style={{ maxWidth: 900, maxHeight: '90vh', margin: 'auto' }}
+            >
+              {/* Header do preview */}
+              <div className="flex items-center justify-between px-5 py-3 border-b shrink-0" style={{ borderColor: '#e1e8f0' }}>
+                <div className="flex items-center gap-3">
+                  <span className="shrink-0">{fileIcon(preview.doc.content_type)}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-navy-800">{preview.doc.file_name}</p>
+                    <p className="text-xs" style={{ color: '#9ab0c8' }}>{fmtFileSize(preview.doc.file_size)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => window.open(preview.url, '_blank')}
+                    className="btn-secondary btn-sm flex items-center gap-1.5"
+                  >
+                    <Download size={13} /> Baixar
+                  </button>
+                  <button onClick={() => setPreview(null)} className="btn-ghost btn-sm p-2">
+                    <X size={15} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Conteúdo do preview */}
+              <div className="flex-1 overflow-auto bg-slate-100 flex items-center justify-center p-4">
+                {preview.doc.content_type === 'application/pdf' ? (
+                  <iframe
+                    src={preview.url}
+                    className="w-full h-full rounded-xl"
+                    style={{ minHeight: 500 }}
+                    title={preview.doc.file_name}
+                  />
+                ) : preview.doc.content_type.startsWith('image/') ? (
+                  <img
+                    src={preview.url}
+                    alt={preview.doc.file_name}
+                    className="max-w-full max-h-full rounded-xl shadow-lg object-contain"
+                  />
+                ) : null}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Remover documento"
+        message="Esta ação não pode ser desfeita. O arquivo será removido permanentemente."
+        confirmLabel="Remover"
+        danger
+        loading={deleteMutation.isPending}
+        onConfirm={() => { if (deleteTarget) { deleteMutation.mutate(deleteTarget); setDeleteTarget(null); } }}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </>
   );
 }
