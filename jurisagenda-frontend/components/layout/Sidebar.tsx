@@ -18,7 +18,7 @@ const NAV = [
 export function Sidebar() {
   const path   = usePathname();
   const router = useRouter();
-  const { user, clear } = useAuth();
+  const { user, clear, avatarUrl } = useAuth();
 
   const initials = user?.full_name
     ?.split(' ')
@@ -75,7 +75,7 @@ export function Sidebar() {
         {NAV.map(({ href, icon: Icon, label }, i) => {
           const active =
             href === '/dashboard'
-              ? path === '/dashboard'
+              ? path === '/dashboard' || path === '/dashboard/'
               : path.startsWith(href);
 
           return (
@@ -119,29 +119,29 @@ export function Sidebar() {
       </nav>
 
       {/* Rodapé com usuário */}
-      <div className="p-3 border-t" style={{ borderColor: '#e2d9c8' }}>
-        <div
-          className="flex items-center gap-3 px-2 py-2 rounded-xl"
-          style={{ background: '#faf8f3' }}
-        >
+      <div className="p-3 border-t dark:border-navy-800" style={{ borderColor: '#e2d9c8' }}>
+        <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-[#faf8f3] dark:bg-[#1a2840]">
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white"
+            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white overflow-hidden"
             style={{ background: '#1e3f5c' }}
           >
-            {initials}
+            {avatarUrl
+              ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+              : initials
+            }
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-navy-800 truncate">
+            <p className="text-xs font-semibold text-navy-800 dark:text-blue-200 truncate">
               {user?.full_name}
             </p>
-            <p className="text-[10px] truncate" style={{ color: '#a89e90' }}>
+            <p className="text-[10px] truncate dark:text-blue-400" style={{ color: '#a89e90' }}>
               {user?.role}
             </p>
           </div>
           <button
             onClick={logout}
             title="Sair"
-            className="transition-colors p-1 rounded-lg hover:bg-red-50"
+            className="transition-colors p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
             style={{ color: '#c8bfb2' }}
           >
             <LogOut size={14} />

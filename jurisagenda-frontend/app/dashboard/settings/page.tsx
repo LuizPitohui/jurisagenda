@@ -4,12 +4,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Users, Plus, Pencil, Trash2, Loader2, X, KeyRound, User } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, Loader2, X, KeyRound, User, Tv } from 'lucide-react';
 import { toast } from 'sonner';
 import { accountsApi } from '@/lib/api';
 import { useAuth } from '@/store';
 import { cn } from '@/lib/utils';
+import { AvatarUpload } from '@/components/ui/AvatarUpload';
 import type { User as UserType } from '@/types';
+
+// Antecedência padrão TV — salva no localStorage
+const TV_DEFAULTS_KEY = 'juris-tv-defaults';
+const getTVDefaults = () => {
+  try { return JSON.parse(localStorage.getItem(TV_DEFAULTS_KEY) ?? '{}'); } catch { return {}; }
+};
+const saveTVDefaults = (v: any) => localStorage.setItem(TV_DEFAULTS_KEY, JSON.stringify(v));
 
 const ROLES: Record<string, string> = {
   ADMIN: 'Administrador',
@@ -45,7 +53,7 @@ type ProfileForm = z.infer<typeof profileSchema>;
 export default function SettingsPage() {
   const { user, setUser } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab]           = useState<'users' | 'profile'>('profile');
+  const [tab, setTab]           = useState<'users' | 'profile' | 'tv'>('profile');
   const [showCreate, setShowCreate] = useState(false);
   const [editUser, setEditUser]     = useState<UserType | null>(null);
 
@@ -106,6 +114,7 @@ export default function SettingsPage() {
       <div className="flex gap-1 border-b" style={{ borderColor: '#e2d9c8' }}>
         {[
           { key: 'profile', label: 'Meu Perfil', icon: User },
+          { key: 'tv',      label: 'Painel TV',  icon: Tv   },
           ...(isAdmin ? [{ key: 'users', label: 'Usuários', icon: Users }] : []),
         ].map(({ key, label, icon: Icon }) => (
           <button
@@ -124,6 +133,13 @@ export default function SettingsPage() {
       {tab === 'profile' && (
         <div className="grid grid-cols-2 gap-6">
           <div className="card p-6 space-y-4">
+            <div className="flex items-center gap-4 pb-2 border-b" style={{ borderColor: '#e2d9c8' }}>
+              <AvatarUpload />
+              <div>
+                <p className="font-semibold text-navy-800">{user?.full_name}</p>
+                <p className="text-xs" style={{ color: '#a89e90' }}>{user?.email}</p>
+              </div>
+            </div>
             <h3 className="font-semibold text-navy-800">Dados pessoais</h3>
             <form onSubmit={profileForm.handleSubmit(d => profileMutation.mutate(d))} className="space-y-4">
               <div>
@@ -172,6 +188,45 @@ export default function SettingsPage() {
               </button>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* ── Painel TV ── */}
+      {tab === 'tv' && (
+        <div className="card p-6 max-w-md space-y-5">
+          <h3 className="font-semibold text-navy-800 flex items-center gap-2"><Tv size={16} /> Antecedência padrão</h3>
+          <p className="text-xs" style={{ color: '#6b8099' }}>
+            Define o valor padrão de antecedência ao criar novos eventos com TV habilitada.
+          </p>
+          <div className="flex gap-3 items-center">
+            <input
+              type="number"
+              min="0"
+              defaultValue={getTVDefaults().value ?? 15}
+              id="tv-advance-value"
+              className="field-input w-24 text-center"
+            />
+            <select
+              defaultValue={getTVDefaults().unit ?? 'MINUTES'}
+              id="tv-advance-unit"
+              className="field-input flex-1"
+            >
+              <option value="MINUTES">Minutos</option>
+              <option value="HOURS">Horas</option>
+              <option value="DAYS">Dias</option>
+            </select>
+          </div>
+          <button
+            onClick={() => {
+              const value = parseInt((document.getElementById('tv-advance-value') as HTMLInputElement).value);
+              const unit  = (document.getElementById('tv-advance-unit') as HTMLSelectElement).value;
+              saveTVDefaults({ value, unit });
+              toast.success('Antecedência padrão salva!');
+            }}
+            className="btn-primary w-full"
+          >
+            Salvar
+          </button>
         </div>
       )}
 

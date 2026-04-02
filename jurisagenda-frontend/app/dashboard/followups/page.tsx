@@ -1,9 +1,11 @@
 'use client';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Bell, CheckCircle, XCircle, Clock, ChevronRight } from 'lucide-react';
 import { followupsApi } from '@/lib/api';
 import { EVENT_CONFIG, fmtDateTime, fmtRelative } from '@/lib/utils';
+import { Pagination } from '@/components/ui/Pagination';
 import type { FollowUp } from '@/types';
 
 const OUTCOME_CONFIG = {
@@ -126,12 +128,15 @@ function FollowUpCard({ followup }: { followup: FollowUp }) {
 }
 
 export default function FollowUpsPage() {
+  const [page, setPage] = useState(1);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['followups'],
-    queryFn:  () => followupsApi.list(),
+    queryKey: ['followups', page],
+    queryFn:  () => followupsApi.list(page),
   });
 
-  const followups = data?.results ?? [];
+  const followups  = data?.results ?? [];
+  const totalPages = data?.pagination?.total_pages ?? 1;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -192,6 +197,7 @@ export default function FollowUpsPage() {
           {followups.map((fu) => (
             <FollowUpCard key={fu.id} followup={fu} />
           ))}
+          <Pagination currentPage={page} totalPages={totalPages} onPage={setPage} />
         </div>
       )}
 

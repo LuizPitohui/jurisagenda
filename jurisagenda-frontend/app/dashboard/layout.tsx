@@ -11,6 +11,7 @@ import { useWebSocket }     from '@/hooks/useWebSocket';
 import type { WSMessage }   from '@/types';
 import { toast }            from 'sonner';
 import { authApi, clearTokens, getRefresh } from '@/lib/api';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 const INACTIVITY_MS = 30 * 60 * 1000; // 30 minutos
 
@@ -20,6 +21,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const enqueue = useFollowUpModal((s) => s.enqueue);
   const [checking, setChecking] = useState(true);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useDocumentTitle();
 
   const doLogout = useCallback(() => {
     const rt = getRefresh();
@@ -80,9 +83,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (checking) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#f4f6f9' }}>
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#f4f6f9' }}>
+    <div className="flex h-screen overflow-hidden bg-[#f4f6f9] dark:bg-[#0f1923]">      <Sidebar />
+      <div className="flex-1 flex flex-col overflow-hidden bg-[#f4f6f9] dark:bg-[#0f1923]">
         <Header />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>

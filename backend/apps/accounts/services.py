@@ -8,6 +8,8 @@ O Model apenas persiste. Código testável e isolado.
 import logging
 
 from django.contrib.auth.hashers import check_password
+from django.core.mail import send_mail
+from django.conf import settings
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
 
@@ -39,7 +41,52 @@ class UserService:
             oab_number=oab_number,
         )
         logger.info("Usuário criado: %s (role=%s)", email, role)
+
+        # Envia e-mail de boas-vindas em background (não bloqueia a resposta)
+        try:
+            UserService._send_welcome_email(user, password)
+        except Exception as exc:
+            logger.warning("Falha ao enviar e-mail de boas-vindas para %s: %s", email, exc)
+
         return user
+
+    @staticmethod
+    def _send_welcome_email(user: User, temp_password: str) -> None:
+        """Envia e-mail de boas-vindas com credenciais de acesso."""
+        role_labels = {
+            "ADMIN":       "Administrador",
+            "LAWYER":      "Advogado",
+            "SECRETARY":   "Secretária",
+            "TV_OPERATOR": "Operador de TV",
+        }
+        role_label = role_labels.get(user.role, user.role)
+        app_url    = getattr(settings, "APP_URL", "http://localhost")
+
+        subject = "Bem-vindo ao JurisAgenda — Suas credenciais de acesso"
+        message = f"""Olá, {user.full_name or user.email}!
+
+Sua conta no JurisAgenda foi criada com sucesso.
+
+Perfil: {role_label}
+E-mail: {user.email}
+Senha temporária: {temp_password}
+
+Acesse o sistema em: {app_url}
+
+Por segurança, recomendamos alterar sua senha no primeiro acesso em:
+{app_url}/dashboard/settings
+
+Atenciosamente,
+Equipe JurisAgenda
+"""
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@jurisagenda.com.br"),
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        logger.info("E-mail de boas-vindas enviado para %s", user.email)
 
     @staticmethod
     @transaction.atomic

@@ -128,12 +128,24 @@ export const eventsApi = {
 
     confirmCall: async (id: string) =>
         (await api.post(`events/${id}/confirm-call/`)).data,
+
+    restore: async (id: string) =>
+        (await api.post(`events/${id}/restore/`)).data,
+
+    history: async (id: string): Promise<{ history: any[] }> =>
+        (await api.get(`events/${id}/history/`)).data,
+
+    markDone: async (id: string) =>
+        (await api.post(`events/${id}/mark-done/`)).data,
+
+    duplicate: async (id: string): Promise<Event> =>
+        (await api.post(`events/${id}/duplicate/`)).data,
 };
 
 // ── Follow-ups ────────────────────────────────────────────────────────
 export const followupsApi = {
-    list: async (): Promise<Paginated<FollowUp>> =>
-        (await api.get('followups/')).data,
+    list: async (page = 1): Promise<Paginated<FollowUp>> =>
+        (await api.get('followups/', { params: { page } })).data,
 
     get: async (id: string): Promise<FollowUp> =>
         (await api.get(`followups/${id}/`)).data,
@@ -197,8 +209,8 @@ export const documentsApi = {
 
 // ── Clients ───────────────────────────────────────────────────────────
 export const clientsApi = {
-    list: async (search?: string): Promise<Paginated<Client>> =>
-        (await api.get('clients/', { params: search ? { search } : {} })).data,
+    list: async (search?: string, page = 1): Promise<Paginated<Client>> =>
+        (await api.get('clients/', { params: { ...(search ? { search } : {}), page } })).data,
 
     get: async (id: string): Promise<Client> =>
         (await api.get(`clients/${id}/`)).data,
@@ -232,8 +244,21 @@ export const accountsApi = {
     list: async (): Promise<Paginated<User>> =>
         (await api.get('auth/users/')).data,
 
+    // Endpoint mínimo para selects — acessível a todos os roles
+    listSelect: async (): Promise<Paginated<User>> =>
+        (await api.get('auth/users/select/')).data,
+
     updateMe: async (p: Partial<User>): Promise<User> =>
         (await api.patch('auth/me/', p)).data,
+
+    uploadAvatar: async (file: File): Promise<{ avatar_url: string; avatar_key: string }> => {
+        const form = new FormData();
+        form.append('avatar', file);
+        const { data } = await api.post('auth/me/avatar/', form, {
+            headers: { 'Content-Type': undefined }, // deixa o browser definir com o boundary correto
+        });
+        return data;
+    },
 
     create: async (p: any): Promise<User> =>
         (await api.post('auth/users/', p)).data,

@@ -8,6 +8,7 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from rest_framework.permissions import IsAdminUser
 
 # Health checks
 from core.health import health_check, health_check_db, health_check_redis, health_check_minio
@@ -24,10 +25,10 @@ urlpatterns = [
     path("api/v1/tv/", include("tv.urls")),
     path("api/v1/clients/", include("clients.urls")),
 
-    # OpenAPI / Swagger
-    path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/v1/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("api/v1/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    # OpenAPI / Swagger — apenas admins autenticados
+    path("api/v1/schema/", SpectacularAPIView.as_view(permission_classes=[IsAdminUser]), name="schema"),
+    path("api/v1/docs/", SpectacularSwaggerView.as_view(url_name="schema", permission_classes=[IsAdminUser]), name="swagger-ui"),
+    path("api/v1/redoc/", SpectacularRedocView.as_view(url_name="schema", permission_classes=[IsAdminUser]), name="redoc"),
 
     # Health checks
     path("api/v1/health/", health_check, name="health"),

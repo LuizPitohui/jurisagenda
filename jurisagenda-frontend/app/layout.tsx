@@ -33,6 +33,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/logo-norte.png" type="image/png" />
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            const t = JSON.parse(localStorage.getItem('juris-theme') || '{}');
+            if (t.state?.dark) document.documentElement.classList.add('dark');
+          } catch {}
+        `}} />
       </head>
       <body
         className={`

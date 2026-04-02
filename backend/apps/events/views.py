@@ -79,6 +79,89 @@ class EventViewSet(
         EventService.cancel_event(event, cancelled_by=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(detail=True, methods=["post"], url_path="restore")
+    def restore(self, request, pk=None):
+        """POST /api/v1/events/{id}/restore/ — Desfaz cancelamento."""
+        event = self.get_object()
+        if event.status != EventStatus.CANCELLED:
+            return Response({"detail": "Evento não está cancelado."}, status=status.HTTP_400_BAD_REQUEST)
+        event.status = EventStatus.SCHEDULED
+        event.save(update_fields=["status", "updated_at"])
+        return Response({"detail": "Evento restaurado."})
+
+    @action(detail=True, methods=["get"], url_path="history")
+    def history(self, request, pk=None):
+        """GET /api/v1/events/{id}/history/ — Histórico de alterações do evento."""
+        event = self.get_object()
+        from accounts.models import AuditLog
+        logs = AuditLog.objects.filter(
+            resource_type="Event",
+            resource_id=str(event.id),
+        ).select_related("user").order_by("-timestamp")[:50]
+
+        data = [
+            {
+                "id":        log.id,
+                "action":    log.action,
+                "user":      log.user.full_name if log.user else "Sistema",
+                "timestamp": log.timestamp.isoformat(),
+                "metadata":  log.metadata,
+            }
+            for log in logs
+        ]
+        return Response({"history": data})
+
+    @action(detail=True, methods=["post"], url_path="mark-done")
+    def mark_done(self, request, pk=None):
+        """POST /api/v1/events/{id}/mark-done/ — Marca evento como realizado."""
+        event = self.get_object()
+        if event.status == EventStatus.DONE:
+            return Response({"detail": "Evento já está marcado como realizado."})
+        event.status = EventStatus.DONE
+        event.save(update_fields=["status", "updated_at"])
+        from accounts.services import AuditService
+        AuditService.log(
+            user=request.user,
+            action="UPDATE",
+            resource_type="Event",
+            resource_id=str(event.id),
+            metadata={"action": "mark_done"},
+        )
+        return Response({"detail": "Evento marcado como realizado."})
+
+    @action(detail=True, methods=["post"], url_path="duplicate")
+    def duplicate(self, request, pk=None):
+        """POST /api/v1/events/{id}/duplicate/ — Cria cópia do evento."""
+        original = self.get_object()
+        new_event = Event.objects.create(
+            title=f"{original.title} (cópia)",
+            event_type=original.event_type,
+            start_datetime=original.start_datetime,
+            end_datetime=original.end_datetime,
+            location=original.location,
+            notes=original.notes,
+            video_link=original.video_link,
+            supplier_name=original.supplier_name,
+            due_date=original.due_date,
+            client=original.client,
+            process_number=original.process_number,
+            assigned_to=original.assigned_to,
+            tv_enabled=original.tv_enabled,
+            tv_priority=original.tv_priority,
+            tv_advance_value=original.tv_advance_value,
+            tv_advance_unit=original.tv_advance_unit,
+        )
+        from accounts.services import AuditService
+        AuditService.log(
+            user=request.user,
+            action="CREATE",
+            resource_type="Event",
+            resource_id=str(new_event.id),
+            metadata={"duplicated_from": str(original.id)},
+        )
+        serializer = EventDetailSerializer(new_event)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
     @action(detail=False, methods=["get"], url_path="calendar")
     def calendar(self, request):
         """GET /api/v1/events/calendar/?month=4&year=2026"""

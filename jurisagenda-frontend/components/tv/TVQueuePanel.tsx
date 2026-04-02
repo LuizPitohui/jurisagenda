@@ -69,8 +69,7 @@ export function TVQueuePanel() {
 
       {/* Cabeçalho */}
       <div
-        className="flex items-center justify-between px-4 py-3 border-b"
-        style={{ borderColor: '#e2d9c8', background: '#faf8f3' }}
+        className="flex items-center justify-between px-4 py-3 border-b border-[#e2d9c8] dark:border-navy-800 bg-[#faf8f3] dark:bg-[#162030]"
       >
         <div className="flex items-center gap-2">
           <Monitor size={15} style={{ color: '#1e3f5c' }} />
@@ -91,7 +90,7 @@ export function TVQueuePanel() {
       </div>
 
       {/* Chamada ativa */}
-      <div className="p-4 border-b" style={{ borderColor: '#e2d9c8' }}>
+      <div className="p-4 border-b border-[#e2d9c8] dark:border-navy-800">
         <p
           className="text-[10px] font-bold uppercase tracking-widest mb-2"
           style={{ color: '#a89e90' }}
@@ -163,8 +162,7 @@ export function TVQueuePanel() {
               key="empty"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="rounded-xl p-4 text-center"
-              style={{ background: '#faf8f3' }}
+              className="rounded-xl p-4 text-center bg-[#faf8f3] dark:bg-[#1a2840]"
             >
               <p className="text-sm" style={{ color: '#c8bfb2' }}>
                 Nenhuma chamada ativa
@@ -192,8 +190,8 @@ export function TVQueuePanel() {
             {history.map((call, i) => (
               <div
                 key={`${call.code}-${i}`}
-                className="flex items-center gap-3 p-2.5 rounded-xl"
-                style={{ background: '#faf8f3', opacity: 1 - i * 0.25 }}
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-[#faf8f3] dark:bg-[#1a2840]"
+                style={{ opacity: 1 - i * 0.25 }}
               >
                 <span
                   className="font-serif font-bold text-base"
@@ -217,7 +215,7 @@ export function TVQueuePanel() {
       </div>
 
       {/* Link para o painel TV */}
-      <div className="p-3 border-t" style={{ borderColor: '#e2d9c8' }}>
+      <div className="p-3 border-t border-[#e2d9c8] dark:border-navy-800">
         <a
           href="/tv"
           target="_blank"
