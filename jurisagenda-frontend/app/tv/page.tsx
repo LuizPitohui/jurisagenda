@@ -1,5 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { getAccess, getRefresh, authApi } from '@/lib/api';
+import { useAuth } from '@/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gavel, Users, Clock, FileText, Wifi, WifiOff } from 'lucide-react';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -40,12 +43,41 @@ function Clock24() {
 export default function TVPage() {
   const { active, history, speaking, setCall, confirm, setSpeaking, setHistory } = useTV();
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const router = useRouter();
+  const { isAuth, setUser } = useAuth();
+
+  // Verifica autenticação antes de mostrar o painel
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken   = params.get('token');
+    const urlRefresh = params.get('refresh');
+    if (urlToken && urlRefresh) {
+      sessionStorage.setItem('access', urlToken);
+      sessionStorage.setItem('refresh', urlRefresh);
+      window.history.replaceState({}, '', '/tv');
+    }
+
+    const verify = async () => {
+      const hasToken = getRefresh();
+      if (isAuth || hasToken) {
+        try {
+          const user = await authApi.me();
+          setUser(user);
+          setChecking(false);
+          return;
+        } catch {}
+      }
+      router.replace('/login');
+    };
+    verify();
+  }, []); // eslint-disable-line
 
   // Tenta desbloquear autoplay automaticamente ao montar
   useEffect(() => {
+    if (checking) return;
     const unlock = async () => {
       try {
-        // Cria um AudioContext silencioso para desbloquear o autoplay
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         await ctx.resume();
         const buf = ctx.createBuffer(1, 1, 22050);
@@ -54,12 +86,10 @@ export default function TVPage() {
         src.connect(ctx.destination);
         src.start(0);
         setAudioUnlocked(true);
-      } catch {
-        // Se falhar, aguarda interação do usuário
-      }
+      } catch {}
     };
     unlock();
-  }, []);
+  }, [checking]);
 
   // Busca histórico do dia ao montar (só se autenticado)
   const { data: historyData } = useQuery({
@@ -97,6 +127,8 @@ export default function TVPage() {
   const speakTTS = (text: string) => {
     speakGoogleTTS(text, () => setSpeaking(true), () => setSpeaking(false));
   };
+
+  if (checking) return null;
 
   const activeCfg = active ? EVENT_CONFIG[active.event_type] : null;
   const ActiveIcon = active ? ICONS[active.event_type] : null;
