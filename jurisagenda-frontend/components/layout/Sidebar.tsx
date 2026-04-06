@@ -119,7 +119,7 @@ export function Sidebar() {
             className="text-[10px] px-1.5 py-0.5 rounded-full"
             style={{ background: '#f3ecdb', color: '#8a7e70' }}
           >
-            PÚBLICO
+            
           </span>
         </Link>
       </nav>
