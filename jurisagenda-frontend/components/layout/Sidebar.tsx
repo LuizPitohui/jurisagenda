@@ -106,7 +106,13 @@ export function Sidebar() {
           Ferramentas
         </p>
 
-        <Link href="/tv" target="_blank" className="nav-link">
+        <Link href="/tv" target="_blank" className="nav-link" onClick={(e) => {
+          e.preventDefault();
+          const token = sessionStorage.getItem('access');
+          const refresh = sessionStorage.getItem('refresh');
+          const url = token ? `/tv?token=${token}&refresh=${refresh}` : '/tv';
+          window.open(url, '_blank');
+        }}>
           <Monitor size={16} className="shrink-0" />
           <span className="flex-1">Painel TV</span>
           <span

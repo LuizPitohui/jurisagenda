@@ -50,6 +50,17 @@ export default function TVPage() {
   // Verifica autenticação antes de mostrar o painel
   useEffect(() => {
     const verify = async () => {
+      // Tenta pegar token da URL (quando aberto da sidebar)
+      const params = new URLSearchParams(window.location.search);
+      const urlToken   = params.get('token');
+      const urlRefresh = params.get('refresh');
+      if (urlToken && urlRefresh) {
+        sessionStorage.setItem('access', urlToken);
+        sessionStorage.setItem('refresh', urlRefresh);
+        // Limpa a URL sem recarregar
+        window.history.replaceState({}, '', '/tv');
+      }
+
       const hasToken = getRefresh();
       if (isAuth || hasToken) {
         try {
