@@ -1,5 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { getAccess, getRefresh, authApi } from '@/lib/api';
+import { useAuth } from '@/store';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gavel, Users, Clock, FileText, Wifi, WifiOff } from 'lucide-react';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -40,6 +43,28 @@ function Clock24() {
 export default function TVPage() {
   const { active, history, speaking, setCall, confirm, setSpeaking, setHistory } = useTV();
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const router = useRouter();
+  const { isAuth, setUser } = useAuth();
+
+  // Verifica autenticação antes de mostrar o painel
+  useEffect(() => {
+    const verify = async () => {
+      const hasToken = getRefresh();
+      if (isAuth || hasToken) {
+        try {
+          const user = await authApi.me();
+          setUser(user);
+          setChecking(false);
+          return;
+        } catch {}
+      }
+      router.replace('/login');
+    };
+    verify();
+  }, []);
+
+  if (checking) return null;
 
   // Tenta desbloquear autoplay automaticamente ao montar
   useEffect(() => {
