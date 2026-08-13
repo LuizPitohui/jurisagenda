@@ -27,3 +27,8 @@ dist/
 build/
 staticfiles/
 media/
+.env
+.env.local
+.env.*.local
+.env.prod
+!.env*.example
